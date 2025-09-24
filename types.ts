@@ -36,5 +36,15 @@ export interface Transaction {
   date: string; // YYYY-MM-DD
 }
 
+export interface GeneratedFile {
+  id: string;
+  userId: string;
+  textSnippet: string;
+  voice: string;
+  charCount: number;
+  url: string;
+  createdAt: string; // ISO 8601 format
+}
 
-export type Page = 'home' | 'pricing' | 'top-up' | 'admin';
+
+export type Page = 'home' | 'pricing' | 'top-up' | 'admin' | 'transaction-history' | 'file-history';

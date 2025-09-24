@@ -7,6 +7,8 @@ import HomePage from './pages/HomePage';
 import PricingPage from './pages/PricingPage';
 import TopUpPage from './pages/TopUpPage';
 import AdminDashboard from './pages/AdminDashboard';
+import TransactionHistoryPage from './pages/TransactionHistoryPage';
+import FileHistoryPage from './pages/FileHistoryPage';
 import { Page } from './types';
 
 const AppContent: React.FC = () => {
@@ -27,6 +29,10 @@ const AppContent: React.FC = () => {
                 return <TopUpPage navigate={navigate} />;
             case 'admin':
                 return user?.role === 'admin' ? <AdminDashboard /> : <HomePage />;
+            case 'transaction-history':
+                return user ? <TransactionHistoryPage /> : <HomePage />;
+            case 'file-history':
+                return user ? <FileHistoryPage /> : <HomePage />;
             default:
                 return <HomePage />;
         }

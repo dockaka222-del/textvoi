@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, Page } from '../types';
@@ -40,6 +41,11 @@ const UserMenu: React.FC<{ user: User; logout: () => void; navigate: (page: Page
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const handleNavigate = (page: Page) => {
+        navigate(page);
+        setIsOpen(false);
+    };
+
     return (
         <div className="relative" ref={menuRef}>
             <button onClick={() => setIsOpen(!isOpen)} className="flex items-center space-x-2">
@@ -54,11 +60,13 @@ const UserMenu: React.FC<{ user: User; logout: () => void; navigate: (page: Page
                             <p className="text-gray-500 truncate">{user.email}</p>
                             <p className="text-indigo-600 font-bold mt-1">{user.credits.toLocaleString('vi-VN')} credits</p>
                         </div>
-                         <a href="#" onClick={(e) => { e.preventDefault(); navigate('top-up'); setIsOpen(false); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Nạp Credit</a>
+                         <a href="#" onClick={(e) => { e.preventDefault(); handleNavigate('top-up'); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Nạp Credit</a>
+                         <a href="#" onClick={(e) => { e.preventDefault(); handleNavigate('file-history'); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Lịch sử Tệp Âm thanh</a>
+                         <a href="#" onClick={(e) => { e.preventDefault(); handleNavigate('transaction-history'); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Lịch sử Giao dịch</a>
                         {user.role === 'admin' && (
-                           <a href="#" onClick={(e) => { e.preventDefault(); navigate('admin'); setIsOpen(false); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Bảng điều khiển Admin</a>
+                           <a href="#" onClick={(e) => { e.preventDefault(); handleNavigate('admin'); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t" role="menuitem">Bảng điều khiển Admin</a>
                         )}
-                        <a href="#" onClick={(e) => { e.preventDefault(); logout(); setIsOpen(false); }} className="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100" role="menuitem">Đăng xuất</a>
+                        <a href="#" onClick={(e) => { e.preventDefault(); logout(); setIsOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 border-t" role="menuitem">Đăng xuất</a>
                     </div>
                 </div>
             )}

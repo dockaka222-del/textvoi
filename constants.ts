@@ -1,5 +1,5 @@
 
-import { PricingPlan, User, DiscountCode, Transaction } from './types';
+import { PricingPlan, User, DiscountCode, Transaction, GeneratedFile } from './types';
 
 export const MOCK_ADMIN_USER: User = {
     id: 'admin01',
@@ -69,8 +69,49 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
     { id: 'txn_4', userId: 'user_1', userName: 'Nguyễn Văn A', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-15' },
     { id: 'txn_5', userId: 'user01', userName: 'Người Dùng', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-12' },
     { id: 'txn_6', userId: 'user_2', userName: 'Trần Thị B', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-10' },
-    { id: 'txn_7', userId: 'user_3', userName: 'Lê Hoàng C', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-09' },
+    { id: 'txn_7', userId: 'user01', userName: 'Người Dùng', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-09' },
     { id: 'txn_8', userId: 'user_4', userName: 'Phạm Minh D', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-05' },
     { id: 'txn_9', userId: 'user_1', userName: 'Nguyễn Văn A', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-02' },
     { id: 'txn_10', userId: 'user_2', userName: 'Trần Thị B', planId: 'plan_business', planName: 'Doanh nghiệp', amount: 799000, date: '2024-06-28' },
+];
+
+
+const now = new Date();
+export const MOCK_GENERATED_FILES: GeneratedFile[] = [
+    { 
+        id: 'file_1', 
+        userId: 'user01', 
+        textSnippet: 'Chào mừng bạn đến với AI Voice Studio...',
+        voice: 'Giọng Nữ Miền Bắc (Mai)',
+        charCount: 45,
+        url: 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-A.wav',
+        createdAt: now.toISOString(),
+    },
+    { 
+        id: 'file_2', 
+        userId: 'user01', 
+        textSnippet: 'Đây là một thử nghiệm cho giọng đọc tin tức...',
+        voice: 'Giọng đọc tin tức',
+        charCount: 150,
+        url: 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Wavenet-A.wav',
+        createdAt: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+    },
+    { 
+        id: 'file_3', 
+        userId: 'user01', 
+        textSnippet: 'Một tệp âm thanh đã được tạo ra từ khá lâu...',
+        voice: 'Giọng Nam Miền Nam (Gia Hưng)',
+        charCount: 88,
+        url: 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-D.wav',
+        createdAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago (expired)
+    },
+     { 
+        id: 'file_4', 
+        userId: 'user_2', // Belongs to another user
+        textSnippet: 'File này không thuộc về người dùng đang đăng nhập...',
+        voice: 'Giọng Nữ Miền Nam (Ban Mai)',
+        charCount: 120,
+        url: 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-C.wav',
+        createdAt: new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString(), // 12 hours ago
+    },
 ];
