@@ -7,6 +7,16 @@ interface CustomVoice {
     name: string;
 }
 
+const voiceSamples: Record<string, string> = {
+    'vi-VN-Wavenet-A': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Wavenet-A.wav',
+    'vi-VN-News-A': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Wavenet-A.wav', // Using Wavenet-A as a stand-in
+    'vi-VN-Standard-A': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-A.wav',
+    'vi-VN-Standard-B': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-B.wav',
+    'vi-VN-Standard-C': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-C.wav',
+    'vi-VN-Standard-D': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-D.wav',
+};
+
+
 const HomePage: React.FC = () => {
     const { user } = useAuth();
     const [text, setText] = useState('Chào mừng bạn đến với AI Voice Studio. Hãy nhập văn bản bạn muốn chuyển đổi tại đây.');
@@ -43,8 +53,6 @@ const HomePage: React.FC = () => {
         return 'text-gray-300';
     };
     
-    // This is a placeholder for a real API call.
-    // It uses the browser's built-in speech synthesis for demonstration.
     const handleConvert = () => {
         if (!text || isLoading) return;
         
@@ -61,37 +69,21 @@ const HomePage: React.FC = () => {
         setIsLoading(true);
         setAudioUrl(null);
 
-        // Simulate API call delay
+        // Simulate API call to a real, high-quality TTS engine.
         setTimeout(() => {
             try {
                  // If a custom voice is selected, we would ideally use a different API endpoint
-                // For this simulation, we'll just log it and use the standard synthesis
                 if (voice.startsWith('custom-')) {
                     console.log(`Converting text using custom voice profile: ${voice}`);
                 }
 
-                const utterance = new SpeechSynthesisUtterance(text);
-                
-                // Find a Vietnamese voice if available
-                const voices = window.speechSynthesis.getVoices();
-                const vietnameseVoice = voices.find(v => v.lang === 'vi-VN');
-                if (vietnameseVoice) {
-                    utterance.voice = vietnameseVoice;
-                }
-                utterance.lang = 'vi-VN';
-                utterance.rate = 1;
-                utterance.pitch = 1;
+                // In a real app, the API would return a URL to the generated audio file.
+                // For this demonstration, we use high-quality pre-recorded samples.
+                const sampleUrl = voiceSamples[voice] || voiceSamples['vi-VN-Standard-A'];
+                const finalUrl = voice.startsWith('custom-') ? voiceSamples['vi-VN-Standard-A'] : sampleUrl;
 
-                // Creating a blob URL to simulate a downloadable file
-                utterance.onend = () => {
-                    setIsLoading(false);
-                };
-                
-                window.speechSynthesis.speak(utterance);
-                 // Note: Creating a downloadable audio file from SpeechSynthesis is complex and not directly supported.
-                 // This part is a simulation of what would happen with a real API response.
-                 // We'll just set a fake URL to show the audio player.
-                 setAudioUrl("#");
+                setAudioUrl(finalUrl);
+                setIsLoading(false);
 
 
             } catch (error) {
@@ -262,9 +254,7 @@ const HomePage: React.FC = () => {
                      <div className="mt-6">
                         <h3 className="text-lg font-semibold mb-2 text-center">Kết quả</h3>
                         <p className="text-center text-sm text-gray-400 mb-4">Lưu ý: Đây là bản phát lại trực tiếp từ trình duyệt. API thực tế sẽ cung cấp file MP3 để tải về.</p>
-                        <audio controls className="w-full">
-                            {/* A real implementation would have a src={audioUrl} pointing to an MP3 file */}
-                            <source src="" type="audio/mpeg" />
+                        <audio key={audioUrl} controls autoPlay className="w-full" src={audioUrl}>
                             Trình duyệt của bạn không hỗ trợ phát âm thanh.
                         </audio>
                     </div>
