@@ -83,15 +83,11 @@ const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
     // ========================================================================
     // IMPORTANT: GOOGLE CLIENT ID CONFIGURATION
     // ========================================================================
-    // In a real production application, the Google Client ID MUST be stored in an
-    // environment variable (e.g., in a .env file) and accessed via `process.env`.
-    // Example for Create React App: REACT_APP_GOOGLE_CLIENT_ID='your-id.apps.googleusercontent.com'
-    //
-    // For this demonstration environment where environment variables are not available,
-    // we are using a placeholder value below.
-    //
-    // **ACTION REQUIRED:** Replace the placeholder string with your actual Google Client ID from Google Cloud Console.
-    const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+    // The Google Client ID is loaded from an environment variable for security.
+    // Create a `.env.local` file in the project root and add:
+    // REACT_APP_GOOGLE_CLIENT_ID='your-id.apps.googleusercontent.com'
+    // See `.env.example` for detailed instructions.
+    const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
 
     const handleGoogleLoginCallback = (response: any) => {
@@ -112,8 +108,21 @@ const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
     };
 
     useEffect(() => {
-        if (GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
-            console.warn("Google Client ID is using a placeholder value. Please replace it with your actual Client ID in components/Header.tsx for Google Login to work.");
+        if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID')) {
+            console.error(`
+                *******************************************************************************
+                * Google Sign-In is not configured.                                           *
+                *                                                                             *
+                * Please create a .env.local file and add your Google Client ID.              *
+                * Example: REACT_APP_GOOGLE_CLIENT_ID='your-id.apps.googleusercontent.com'    *
+                * Refer to the .env.example file for more details.                            *
+                *******************************************************************************
+            `);
+            const loginButtonDiv = document.getElementById('google-login-button-container');
+            if (loginButtonDiv) {
+                loginButtonDiv.innerHTML = '<div class="px-4 py-2 text-sm text-yellow-300 bg-yellow-900/50 rounded-md">Google Login not configured</div>';
+            }
+            return;
         }
 
         if (window.google && !user) {
