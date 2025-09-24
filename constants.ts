@@ -1,5 +1,5 @@
 
-import { PricingPlan, User, DiscountCode } from './types';
+import { PricingPlan, User, DiscountCode, Transaction } from './types';
 
 export const MOCK_ADMIN_USER: User = {
     id: 'admin01',
@@ -60,4 +60,17 @@ export const MOCK_DISCOUNT_CODES: DiscountCode[] = [
     { id: 'code_1', code: 'WELCOME25', discountPercent: 25, status: 'active', expiryDate: '2025-12-31' },
     { id: 'code_2', code: 'SUMMER2024', discountPercent: 15, status: 'active', expiryDate: '2024-08-31' },
     { id: 'code_3', code: 'OLDCODE', discountPercent: 10, status: 'expired', expiryDate: '2023-12-31' },
+];
+
+export const MOCK_TRANSACTIONS: Transaction[] = [
+    { id: 'txn_1', userId: 'user_1', userName: 'Nguyễn Văn A', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-20' },
+    { id: 'txn_2', userId: 'user_2', userName: 'Trần Thị B', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-19' },
+    { id: 'txn_3', userId: 'user_4', userName: 'Phạm Minh D', planId: 'plan_business', planName: 'Doanh nghiệp', amount: 799000, date: '2024-07-18' },
+    { id: 'txn_4', userId: 'user_1', userName: 'Nguyễn Văn A', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-15' },
+    { id: 'txn_5', userId: 'user01', userName: 'Người Dùng', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-12' },
+    { id: 'txn_6', userId: 'user_2', userName: 'Trần Thị B', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-10' },
+    { id: 'txn_7', userId: 'user_3', userName: 'Lê Hoàng C', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-09' },
+    { id: 'txn_8', userId: 'user_4', userName: 'Phạm Minh D', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-05' },
+    { id: 'txn_9', userId: 'user_1', userName: 'Nguyễn Văn A', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-02' },
+    { id: 'txn_10', userId: 'user_2', userName: 'Trần Thị B', planId: 'plan_business', planName: 'Doanh nghiệp', amount: 799000, date: '2024-06-28' },
 ];

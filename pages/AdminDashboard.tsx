@@ -3,14 +3,17 @@ import React, { useState } from 'react';
 import UserManagement from '../components/admin/UserManagement';
 import DiscountCodes from '../components/admin/DiscountCodes';
 import PricingManagement from '../components/admin/PricingManagement';
+import RevenueAnalytics from '../components/admin/RevenueAnalytics';
 
-type AdminTab = 'users' | 'discounts' | 'pricing';
+type AdminTab = 'revenue' | 'users' | 'discounts' | 'pricing';
 
 const AdminDashboard: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<AdminTab>('users');
+    const [activeTab, setActiveTab] = useState<AdminTab>('revenue');
 
     const renderTabContent = () => {
         switch (activeTab) {
+            case 'revenue':
+                return <RevenueAnalytics />;
             case 'users':
                 return <UserManagement />;
             case 'discounts':
@@ -41,6 +44,7 @@ const AdminDashboard: React.FC = () => {
             
             <div className="border-b border-gray-700">
                 <nav className="-mb-px flex space-x-4" aria-label="Tabs">
+                    <TabButton tab="revenue">Thống kê Doanh thu</TabButton>
                     <TabButton tab="users">Quản lý Người dùng</TabButton>
                     <TabButton tab="discounts">Quản lý Mã giảm giá</TabButton>
                     <TabButton tab="pricing">Quản lý Bảng giá</TabButton>

@@ -26,4 +26,15 @@ export interface DiscountCode {
     expiryDate: string;
 }
 
+export interface Transaction {
+  id: string;
+  userId: string;
+  userName: string;
+  planId: string;
+  planName: string;
+  amount: number; // in VND
+  date: string; // YYYY-MM-DD
+}
+
+
 export type Page = 'home' | 'pricing' | 'top-up' | 'admin';
