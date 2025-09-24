@@ -1,31 +1,11 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User } from '../types';
-import { MOCK_USERS } from '../constants';
-
-// Define types for Google Identity Services (GSI)
-interface CredentialResponse {
-    credential?: string;
-}
-
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize: (config: { client_id: string; callback: (response: CredentialResponse) => void; }) => void;
-          renderButton: (parent: HTMLElement, options: object) => void;
-          prompt: () => void;
-          disableAutoSelect: () => void;
-        };
-      };
-    };
-  }
-}
+import { MOCK_USERS, MOCK_ADMIN_USER, MOCK_NORMAL_USER } from '../constants';
 
 interface AuthContextType {
   user: User | null;
   login: (googleUserData: { name: string; email: string; avatar: string; }) => void;
+  mockLogin: (role: 'user' | 'admin') => void;
   logout: () => void;
   isAuthenticated: boolean;
   trialCount: number;
@@ -63,13 +43,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
   };
 
-
   const login = (googleUserData: { name: string; email: string; avatar: string; }) => {
-    // In a real app, send the JWT to your backend for verification.
-    // The backend would then return the user's full profile (credits, role, etc.).
-    // For this simulation, we'll check against mock users or create a new one.
+    // This function is kept for potential future re-integration of Google Login,
+    // but is currently unused in favor of mockLogin.
     console.log("Attempting to log in user:", googleUserData.email);
-
     const existingUser = MOCK_USERS.find(u => u.email.toLowerCase() === googleUserData.email.toLowerCase());
     
     let userToSet;
@@ -77,13 +54,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log("Found existing user:", existingUser.name);
         userToSet = existingUser;
     } else {
-        // Create a new user profile for a new Google login
         const newUser: User = {
             id: `user_${Date.now()}`,
             name: googleUserData.name,
             email: googleUserData.email,
             avatar: googleUserData.avatar,
-            credits: 50000, // Welcome bonus credits
+            credits: 50000,
             role: 'user',
             joinDate: new Date().toISOString().split('T')[0],
         };
@@ -93,29 +69,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     setUser(userToSet);
     localStorage.setItem('user', JSON.stringify(userToSet));
-    localStorage.removeItem('guestTrialCount'); // Clear trial data on login
+    localStorage.removeItem('guestTrialCount');
+  };
+
+  const mockLogin = (role: 'user' | 'admin') => {
+    const userToSet = role === 'admin' ? MOCK_ADMIN_USER : MOCK_NORMAL_USER;
+    setUser(userToSet);
+    localStorage.setItem('user', JSON.stringify(userToSet));
+    localStorage.removeItem('guestTrialCount');
   };
 
   const logout = () => {
-    // Clear user from state and local storage
     setUser(null);
     localStorage.removeItem('user');
-    
-    // Reset trial count for the next guest session
     setTrialCount(10);
     localStorage.setItem('guestTrialCount', '10');
-
-    // Disable Google's automatic sign-in for the next visit
-    if (window.google) {
-        window.google.accounts.id.disableAutoSelect();
-        console.log("Google auto sign-in disabled.");
-    }
   };
   
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated, trialCount, decrementTrialCount }}>
+    <AuthContext.Provider value={{ user, login, mockLogin, logout, isAuthenticated, trialCount, decrementTrialCount }}>
       {children}
     </AuthContext.Provider>
   );

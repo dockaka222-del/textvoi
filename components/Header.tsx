@@ -2,17 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, Page } from '../types';
 
-// This is an unsafe, client-side-only JWT decoder for demo purposes.
-// In a real application, you should send the token to your backend for secure verification.
-function decodeJwt(token: string) {
-    try {
-        return JSON.parse(atob(token.split('.')[1]));
-    } catch (e) {
-        console.error("Error decoding JWT:", e);
-        return null;
-    }
-}
-
 interface HeaderProps {
     navigate: (page: Page) => void;
     currentPage: Page;
@@ -77,64 +66,52 @@ const UserMenu: React.FC<{ user: User; logout: () => void; navigate: (page: Page
     );
 };
 
-const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
-    const { user, login, logout } = useAuth();
-    
-    // The Google Client ID is expected to be provided via environment variables.
-    const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-
-    const handleGoogleLoginCallback = (response: any) => {
-        if (!response.credential) {
-            return console.error("Google login failed: No credential returned.");
-        }
-
-        console.log("Received Google credential");
-        const userData = decodeJwt(response.credential);
-        
-        if (userData) {
-            login({
-                name: userData.name,
-                email: userData.email,
-                avatar: userData.picture,
-            });
-        }
-    };
+const LoginMenu: React.FC<{ login: (role: 'user' | 'admin') => void }> = ({ login }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const isClientIdMissing = !GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID');
-
-        if (window.google && !user) {
-            if (isClientIdMissing) {
-                console.warn("Google Client ID is not configured. Google Sign-In is disabled.");
-                const loginButtonDiv = document.getElementById('google-login-button-container');
-                if (loginButtonDiv) {
-                    loginButtonDiv.innerHTML = '<div class="px-4 py-2 text-sm text-yellow-300 bg-yellow-900/50 rounded-md">Google Login unavailable</div>';
-                }
-                return;
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
             }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
-            try {
-                window.google.accounts.id.initialize({
-                    client_id: GOOGLE_CLIENT_ID,
-                    callback: handleGoogleLoginCallback,
-                });
-    
-                const loginButtonDiv = document.getElementById('google-login-button-container');
-                if (loginButtonDiv && loginButtonDiv.childElementCount === 0) {
-                     window.google.accounts.id.renderButton(loginButtonDiv, {
-                        theme: 'filled_black',
-                        size: 'large',
-                        type: 'standard',
-                        shape: 'rectangular',
-                        text: 'continue_with',
-                        logo_alignment: 'left',
-                    });
-                }
-            } catch (error) {
-                console.error("Error initializing Google Sign-In:", error);
-            }
-        }
-    }, [user, GOOGLE_CLIENT_ID]);
+    const handleLogin = (role: 'user' | 'admin') => {
+        login(role);
+        setIsOpen(false);
+    };
+
+    return (
+        <div className="relative" ref={menuRef}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+                Đăng nhập
+            </button>
+            {isOpen && (
+                <div className="absolute right-0 mt-2 w-56 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                    <div className="py-1" role="menu" aria-orientation="vertical">
+                        <a href="#" onClick={(e) => { e.preventDefault(); handleLogin('user'); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                            Đăng nhập (Người dùng)
+                        </a>
+                        <a href="#" onClick={(e) => { e.preventDefault(); handleLogin('admin'); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                            Đăng nhập (Quản trị viên)
+                        </a>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
+    const { user, mockLogin, logout } = useAuth();
 
     return (
         <header className="bg-gray-800/50 backdrop-blur-sm sticky top-0 z-40">
@@ -153,7 +130,7 @@ const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
                         {user ? (
                             <UserMenu user={user} logout={logout} navigate={navigate} />
                         ) : (
-                            <div id="google-login-button-container" />
+                            <LoginMenu login={mockLogin} />
                         )}
                     </div>
                 </div>
