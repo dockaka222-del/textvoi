@@ -1,0 +1,5 @@
+{
+  "name": "AI Voice Studio - Chuyển Văn Bản Thành Giọng Nói",
+  "description": "Một ứng dụng web hiện đại sử dụng React và Gemini API để chuyển đổi văn bản thành giọng nói chất lượng cao, tích hợp quản lý người dùng, hệ thống thanh toán và bảng điều khiển quản trị viên.",
+  "requestFramePermissions": []
+}
