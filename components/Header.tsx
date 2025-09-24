@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, Page } from '../types';
@@ -81,10 +80,18 @@ const UserMenu: React.FC<{ user: User; logout: () => void; navigate: (page: Page
 const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
     const { user, login, logout } = useAuth();
     
-    // The Google Client ID MUST be stored in an environment variable (e.g., .env file).
-    // The build tool (like Vite or Create React App) will replace `process.env.GOOGLE_CLIENT_ID`
-    // with the actual value at build time. For this environment, we assume it exists.
-    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    // ========================================================================
+    // IMPORTANT: GOOGLE CLIENT ID CONFIGURATION
+    // ========================================================================
+    // In a real production application, the Google Client ID MUST be stored in an
+    // environment variable (e.g., in a .env file) and accessed via `process.env`.
+    // Example for Create React App: REACT_APP_GOOGLE_CLIENT_ID='your-id.apps.googleusercontent.com'
+    //
+    // For this demonstration environment where environment variables are not available,
+    // we are using a placeholder value below.
+    //
+    // **ACTION REQUIRED:** Replace the placeholder string with your actual Google Client ID from Google Cloud Console.
+    const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
 
 
     const handleGoogleLoginCallback = (response: any) => {
@@ -105,9 +112,8 @@ const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
     };
 
     useEffect(() => {
-        if (!GOOGLE_CLIENT_ID) {
-            console.error("Google Client ID is not configured in environment variables.");
-            return;
+        if (GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
+            console.warn("Google Client ID is using a placeholder value. Please replace it with your actual Client ID in components/Header.tsx for Google Login to work.");
         }
 
         if (window.google && !user) {

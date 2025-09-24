@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { SpinnerIcon } from '../components/icons/SpinnerIcon';
@@ -18,7 +19,7 @@ const voiceSamples: Record<string, string> = {
 
 
 const HomePage: React.FC = () => {
-    const { user } = useAuth();
+    const { user, trialCount, decrementTrialCount } = useAuth();
     const [text, setText] = useState('Chào mừng bạn đến với AI Voice Studio. Hãy nhập văn bản bạn muốn chuyển đổi tại đây.');
     const [voice, setVoice] = useState('vi-VN-Standard-A');
     const [isLoading, setIsLoading] = useState(false);
@@ -39,16 +40,14 @@ const HomePage: React.FC = () => {
         setCharCount(text.length);
     }, [text]);
 
-    const credits = user ? user.credits : 0;
-    const usagePercentage = credits > 0 ? (charCount / credits) * 100 : 0;
-
     const getCharCountColor = () => {
-        if (!user || credits === 0) return 'text-gray-400';
-        if (usagePercentage > 100) {
-            return 'text-red-500 font-semibold';
-        }
-        if (usagePercentage > 80) {
-            return 'text-yellow-400 font-medium';
+        if (user) {
+            if (!user.credits) return 'text-gray-400';
+            if (charCount > user.credits) return 'text-red-500 font-semibold';
+            if (charCount > user.credits * 0.8) return 'text-yellow-400 font-medium';
+        } else {
+            // Guest mode
+            if (charCount > 100) return 'text-red-500 font-semibold';
         }
         return 'text-gray-300';
     };
@@ -56,14 +55,20 @@ const HomePage: React.FC = () => {
     const handleConvert = () => {
         if (!text || isLoading) return;
         
-        if (!user) {
-            alert('Vui lòng đăng nhập để sử dụng chức năng này.');
-            return;
-        }
-
-        if (charCount > user.credits) {
-            alert('Bạn không đủ credit để thực hiện chuyển đổi này.');
-            return;
+        if (user) {
+            if (charCount > user.credits) {
+                alert('Bạn không đủ credit để thực hiện chuyển đổi này.');
+                return;
+            }
+        } else { // Guest logic
+            if (trialCount <= 0) {
+                alert('Bạn đã hết lượt dùng thử. Vui lòng đăng nhập để tiếp tục.');
+                return;
+            }
+            if (charCount > 100) {
+                alert('Giới hạn 100 ký tự cho mỗi lần dùng thử. Vui lòng đăng nhập để sử dụng nhiều hơn.');
+                return;
+            }
         }
 
         setIsLoading(true);
@@ -83,12 +88,14 @@ const HomePage: React.FC = () => {
                 const finalUrl = voice.startsWith('custom-') ? voiceSamples['vi-VN-Standard-A'] : sampleUrl;
 
                 setAudioUrl(finalUrl);
-                setIsLoading(false);
-
+                if (!user) { // Decrement trial for guest
+                    decrementTrialCount();
+                }
 
             } catch (error) {
                 console.error("Lỗi chuyển đổi giọng nói:", error);
                 alert("Đã xảy ra lỗi trong quá trình chuyển đổi.");
+            } finally {
                 setIsLoading(false);
             }
         }, 1500);
@@ -158,6 +165,13 @@ const HomePage: React.FC = () => {
                     Tạo ra âm thanh tự nhiên và chân thực từ văn bản với công nghệ AI tiên tiến.
                 </p>
 
+                 {!user && (
+                    <div className="text-center bg-yellow-900/50 text-yellow-300 text-sm p-3 rounded-lg">
+                        Bạn đang ở chế độ <strong>khách</strong>. Bạn còn <span className="font-bold text-white">{trialCount}</span> lượt dùng thử, tối đa <span className="font-bold text-white">100</span> ký tự mỗi lần.
+                        <br/> Đăng nhập để sử dụng đầy đủ tính năng.
+                    </div>
+                )}
+
                 <div className="relative">
                     <textarea
                         value={text}
@@ -167,11 +181,11 @@ const HomePage: React.FC = () => {
                         aria-label="Văn bản cần chuyển đổi"
                     />
                     <div className={`absolute bottom-4 right-4 text-sm px-3 py-1 rounded-full bg-gray-900/80 backdrop-blur-sm transition-colors duration-300 ${getCharCountColor()}`}>
-                       {charCount.toLocaleString('vi-VN')} / {user ? user.credits.toLocaleString('vi-VN') : '...'}
+                       {charCount.toLocaleString('vi-VN')} / {user ? user.credits.toLocaleString('vi-VN') : '100'}
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className={`grid grid-cols-1 ${!user ? '' : 'md:grid-cols-3'} gap-6`}>
                     <div>
                         <label htmlFor="voice-select" className="block text-sm font-medium text-gray-300 mb-2">Chọn giọng đọc</label>
                         <select
@@ -190,7 +204,7 @@ const HomePage: React.FC = () => {
                                 <option value="vi-VN-Standard-C">Giọng Nữ Miền Nam (Ban Mai)</option>
                                 <option value="vi-VN-Standard-D">Giọng Nam Miền Nam (Gia Hưng)</option>
                             </optgroup>
-                            {customVoices.length > 0 && (
+                            {user && customVoices.length > 0 && (
                                 <optgroup label="Giọng đọc của bạn">
                                     {customVoices.map(customVoice => (
                                         <option key={customVoice.id} value={customVoice.id}>
@@ -202,41 +216,44 @@ const HomePage: React.FC = () => {
                         </select>
                     </div>
 
-                     <div>
-                        <label htmlFor="text-upload" className="block text-sm font-medium text-gray-300 mb-2">Tải lên file văn bản</label>
-                         <label htmlFor="text-upload" className="w-full flex items-center justify-center p-3 bg-gray-700 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-600 truncate">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                            <span className="text-gray-400 text-sm">
-                                {uploadedTextFileName ? uploadedTextFileName : 'Chọn file...'}
-                            </span>
-                             <input id="text-upload" type="file" accept=".txt,.doc,.docx" className="hidden" onChange={handleTextFileChange} />
-                         </label>
-                    </div>
+                    {user && (
+                        <>
+                            <div>
+                                <label htmlFor="text-upload" className="block text-sm font-medium text-gray-300 mb-2">Tải lên file văn bản</label>
+                                 <label htmlFor="text-upload" className="w-full flex items-center justify-center p-3 bg-gray-700 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-600 truncate">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                    <span className="text-gray-400 text-sm">
+                                        {uploadedTextFileName ? uploadedTextFileName : 'Chọn file...'}
+                                    </span>
+                                     <input id="text-upload" type="file" accept=".txt,.doc,.docx" className="hidden" onChange={handleTextFileChange} />
+                                 </label>
+                            </div>
 
-                    {/* Voice Cloning Section */}
-                    <div className="space-y-2">
-                         <label htmlFor="voice-upload" className="block text-sm font-medium text-gray-300 mb-2">Tạo giọng đọc tùy chỉnh</label>
-                        <div className="flex items-center space-x-2">
-                             <label htmlFor="voice-upload" className="flex-1 cursor-pointer bg-gray-700 border border-gray-600 rounded-lg p-3 text-center text-gray-400 hover:bg-gray-600 truncate">
-                                <input id="voice-upload" type="file" accept="audio/*" className="hidden" onChange={handleFileChange} />
-                                {customVoiceFile ? customVoiceFile.name : 'Chọn file âm thanh...'}
-                             </label>
-                            <button 
-                                onClick={handleCloneVoice} 
-                                disabled={!customVoiceFile || isCloning}
-                                className="flex items-center justify-center px-4 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed transition-colors"
-                                aria-busy={isCloning}
-                            >
-                                {isCloning ? <SpinnerIcon className="w-5 h-5" /> : 'Tạo'}
-                            </button>
-                        </div>
-                         {cloneSuccessMessage && <p className="text-sm text-green-400 mt-2">{cloneSuccessMessage}</p>}
-                    </div>
+                            <div className="space-y-2">
+                                 <label htmlFor="voice-upload" className="block text-sm font-medium text-gray-300 mb-2">Tạo giọng đọc tùy chỉnh</label>
+                                <div className="flex items-center space-x-2">
+                                     <label htmlFor="voice-upload" className="flex-1 cursor-pointer bg-gray-700 border border-gray-600 rounded-lg p-3 text-center text-gray-400 hover:bg-gray-600 truncate">
+                                        <input id="voice-upload" type="file" accept="audio/*" className="hidden" onChange={handleFileChange} />
+                                        {customVoiceFile ? customVoiceFile.name : 'Chọn file âm thanh...'}
+                                     </label>
+                                    <button 
+                                        onClick={handleCloneVoice} 
+                                        disabled={!customVoiceFile || isCloning}
+                                        className="flex items-center justify-center px-4 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed transition-colors"
+                                        aria-busy={isCloning}
+                                    >
+                                        {isCloning ? <SpinnerIcon className="w-5 h-5" /> : 'Tạo'}
+                                    </button>
+                                </div>
+                                 {cloneSuccessMessage && <p className="text-sm text-green-400 mt-2">{cloneSuccessMessage}</p>}
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <button
                     onClick={handleConvert}
-                    disabled={isLoading || (user && charCount > user.credits)}
+                    disabled={isLoading || (user && (charCount === 0 || charCount > user.credits)) || (!user && (charCount === 0 || charCount > 100 || trialCount <= 0))}
                     className="w-full flex items-center justify-center bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-indigo-600/20 hover:shadow-xl hover:shadow-indigo-500/30 disabled:from-indigo-500 disabled:to-purple-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500"
                     aria-busy={isLoading}
                 >

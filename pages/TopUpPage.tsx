@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Page, PricingPlan } from '../types';
 import { SpinnerIcon } from '../components/icons/SpinnerIcon';
@@ -7,6 +6,22 @@ import { PRICING_PLANS } from '../constants';
 interface TopUpPageProps {
     navigate: (page: Page) => void;
 }
+
+// ========================================================================
+// NOTE FOR DEVELOPER on .env configuration for PayOS:
+// ========================================================================
+// The following workflow simulates a SECURE backend integration.
+// Your backend server (e.g., Node.js) should have a `.env` file with
+// the following keys provided by PayOS:
+//
+// PAYOS_CLIENT_ID='your-client-id'
+// PAYOS_API_KEY='your-api-key'
+// PAYOS_CHECKSUM_KEY='your-checksum-key'
+//
+// Your backend code must load these variables and use them to securely
+// communicate with the PayOS API. The frontend should NEVER handle these keys.
+// The frontend only calls your backend to get a payment link/QR code.
+// ========================================================================
 
 const TopUpPage: React.FC<TopUpPageProps> = ({ navigate }) => {
     const [isProcessing, setIsProcessing] = useState(false);
@@ -133,7 +148,10 @@ const TopUpPage: React.FC<TopUpPageProps> = ({ navigate }) => {
                 <div className="mt-8 text-center">
                     <h3 className="font-semibold">Quét mã QR để thanh toán</h3>
                     <p className="text-sm text-gray-400">Sử dụng ứng dụng ngân hàng hoặc ví điện tử của bạn.</p>
-                    <div className="bg-white p-4 rounded-lg inline-block mt-4">
+                    <div className="my-2 p-2 bg-yellow-900/50 text-yellow-300 text-xs rounded-lg">
+                        <strong>Lưu ý:</strong> Đây là giao dịch mô phỏng. Quá trình thanh toán sẽ tự động hoàn tất sau vài giây.
+                    </div>
+                    <div className="bg-white p-4 rounded-lg inline-block mt-2">
                         <img src={qrCodeUrl} alt="PayOS QR Code" />
                     </div>
                      <p className="mt-4 text-sm text-yellow-400 animate-pulse">

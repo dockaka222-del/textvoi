@@ -28,20 +28,41 @@ interface AuthContextType {
   login: (googleUserData: { name: string; email: string; avatar: string; }) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  trialCount: number;
+  decrementTrialCount: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [trialCount, setTrialCount] = useState<number>(10);
 
   useEffect(() => {
-    // Check for a logged-in user in localStorage on initial load
+    // Check for a logged-in user or guest trial state in localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
+    } else {
+      // If no user, it's a guest. Load their trial count.
+      const storedTrials = localStorage.getItem('guestTrialCount');
+      if (storedTrials !== null) {
+        setTrialCount(parseInt(storedTrials, 10));
+      } else {
+        localStorage.setItem('guestTrialCount', '10');
+        setTrialCount(10);
+      }
     }
   }, []);
+  
+  const decrementTrialCount = () => {
+      setTrialCount(prev => {
+          const newCount = Math.max(0, prev - 1);
+          localStorage.setItem('guestTrialCount', String(newCount));
+          return newCount;
+      });
+  };
+
 
   const login = (googleUserData: { name: string; email: string; avatar: string; }) => {
     // In a real app, send the JWT to your backend for verification.
@@ -72,6 +93,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     setUser(userToSet);
     localStorage.setItem('user', JSON.stringify(userToSet));
+    localStorage.removeItem('guestTrialCount'); // Clear trial data on login
   };
 
   const logout = () => {
@@ -79,6 +101,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
     localStorage.removeItem('user');
     
+    // Reset trial count for the next guest session
+    setTrialCount(10);
+    localStorage.setItem('guestTrialCount', '10');
+
     // Disable Google's automatic sign-in for the next visit
     if (window.google) {
         window.google.accounts.id.disableAutoSelect();
@@ -89,7 +115,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated, trialCount, decrementTrialCount }}>
       {children}
     </AuthContext.Provider>
   );
