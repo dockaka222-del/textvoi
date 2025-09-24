@@ -85,7 +85,7 @@ const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
     // ========================================================================
     // The Google Client ID is loaded from an environment variable for security.
     // Create a `.env.local` file in the project root and add:
-    // REACT_APP_GOOGLE_CLIENT_ID='your-id.apps.googleusercontent.com'
+    // REACT_APP_GOOGLE_CLIENT_ID='YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'
     // See `.env.example` for detailed instructions.
     const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
@@ -114,7 +114,7 @@ const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
                 * Google Sign-In is not configured.                                           *
                 *                                                                             *
                 * Please create a .env.local file and add your Google Client ID.              *
-                * Example: REACT_APP_GOOGLE_CLIENT_ID='your-id.apps.googleusercontent.com'    *
+                * Example: REACT_APP_GOOGLE_CLIENT_ID='YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com' *
                 * Refer to the .env.example file for more details.                            *
                 *******************************************************************************
             `);
