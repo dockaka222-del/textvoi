@@ -2,7 +2,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, Page } from '../types';
-import { GoogleIcon } from './icons/GoogleIcon';
+
+// This is an unsafe, client-side-only JWT decoder for demo purposes.
+// In a real application, you should send the token to your backend for secure verification.
+function decodeJwt(token: string) {
+    try {
+        return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+        console.error("Error decoding JWT:", e);
+        return null;
+    }
+}
 
 interface HeaderProps {
     navigate: (page: Page) => void;
@@ -70,6 +80,59 @@ const UserMenu: React.FC<{ user: User; logout: () => void; navigate: (page: Page
 
 const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
     const { user, login, logout } = useAuth();
+    
+    // The Google Client ID MUST be stored in an environment variable (e.g., .env file).
+    // The build tool (like Vite or Create React App) will replace `process.env.GOOGLE_CLIENT_ID`
+    // with the actual value at build time. For this environment, we assume it exists.
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+
+
+    const handleGoogleLoginCallback = (response: any) => {
+        if (!response.credential) {
+            return console.error("Google login failed: No credential returned.");
+        }
+
+        console.log("Received Google credential");
+        const userData = decodeJwt(response.credential);
+        
+        if (userData) {
+            login({
+                name: userData.name,
+                email: userData.email,
+                avatar: userData.picture,
+            });
+        }
+    };
+
+    useEffect(() => {
+        if (!GOOGLE_CLIENT_ID) {
+            console.error("Google Client ID is not configured in environment variables.");
+            return;
+        }
+
+        if (window.google && !user) {
+            try {
+                window.google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleLoginCallback,
+                });
+    
+                const loginButtonDiv = document.getElementById('google-login-button-container');
+                if (loginButtonDiv && loginButtonDiv.childElementCount === 0) {
+                     window.google.accounts.id.renderButton(loginButtonDiv, {
+                        theme: 'filled_black',
+                        size: 'large',
+                        type: 'standard',
+                        shape: 'rectangular',
+                        text: 'continue_with',
+                        logo_alignment: 'left',
+                    });
+                }
+            } catch (error) {
+                console.error("Error initializing Google Sign-In:", error);
+            }
+        }
+    }, [user, GOOGLE_CLIENT_ID]);
 
     return (
         <header className="bg-gray-800/50 backdrop-blur-sm sticky top-0 z-40">
@@ -88,10 +151,7 @@ const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
                         {user ? (
                             <UserMenu user={user} logout={logout} navigate={navigate} />
                         ) : (
-                            <button onClick={login} className="flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-200 transition-all duration-300">
-                                <GoogleIcon className="w-5 h-5" />
-                                <span>Đăng nhập với Google</span>
-                            </button>
+                            <div id="google-login-button-container" />
                         )}
                     </div>
                 </div>

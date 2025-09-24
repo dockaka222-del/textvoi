@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Page, PricingPlan } from '../types';
 import { SpinnerIcon } from '../components/icons/SpinnerIcon';
@@ -19,53 +20,64 @@ const TopUpPage: React.FC<TopUpPageProps> = ({ navigate }) => {
         PRICING_PLANS.find(p => p.popular) || PRICING_PLANS[0]
     );
 
-    const handleGenerateQR = () => {
+    const handleGenerateQR = async () => {
         // =================================================================
-        // QUY TRÌNH BẢO MẬT KHI TÍCH HỢP PAYOS
+        // SECURE PAYOS INTEGRATION WORKFLOW
         // =================================================================
         setIsProcessing(true);
         setQrCodeUrl(null);
 
-        // BƯỚC 1: (FRONTEND -> BACKEND)
-        // Gọi API lên backend của bạn để yêu cầu tạo một đơn hàng thanh toán.
-        // Backend sẽ dùng API Key bí mật để gọi sang PayOS.
-        // TUYỆT ĐỐI KHÔNG GỌI API PAYOS TRỰC TIẾP TỪ FRONTEND.
-        console.log(`[FRONTEND] Gửi yêu cầu tạo đơn hàng cho gói "${selectedPlan.name}"...`);
-
-        // Giả lập việc gọi API và nhận lại link QR từ backend
-        setTimeout(() => {
+        // STEP 1: (FRONTEND -> YOUR BACKEND)
+        // Request your backend to create a payment link.
+        // Your backend will then securely call the PayOS API using its secret API Key and Checksum Key.
+        // !! NEVER CALL PAYOS API DIRECTLY FROM THE FRONTEND. !!
+        try {
+            console.log(`[FRONTEND] Calling backend to create payment link for plan: "${selectedPlan.name}"...`);
+            // --- This part simulates the API call ---
+            await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network latency
+            
+            // In a real app:
+            // const response = await fetch('/api/payos/create-payment', { method: 'POST', ... });
+            // const data = await response.json();
+            
+            // --- Simulated backend response ---
             const fakeOrderId = `order_${Date.now()}`;
             const fakeQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=payos-order-${fakeOrderId}`;
-            
-            console.log(`[BACKEND->FRONTEND] Nhận được mã QR cho đơn hàng: ${fakeOrderId}`);
+            console.log(`[BACKEND->FRONTEND] Response received with orderId: ${fakeOrderId}`);
+
+            // STEP 2: (FRONTEND)
+            // Display the QR code received from the backend.
             setOrderId(fakeOrderId);
             setQrCodeUrl(fakeQrCode);
+
+        } catch (error) {
+            console.error("Failed to generate payment QR code:", error);
+            alert("Đã có lỗi xảy ra khi tạo mã thanh toán. Vui lòng thử lại.");
+        } finally {
             setIsProcessing(false);
-
-            // BƯỚC 2: (FRONTEND)
-            // Hiển thị mã QR và bắt đầu chờ xác nhận.
-            // Trong thực tế, bạn sẽ dùng orderId để hỏi backend về trạng thái thanh toán (polling)
-            // hoặc chờ tín hiệu từ WebSocket.
-
-        }, 1500);
+        }
     };
     
-    // Giả lập việc backend nhận được webhook và frontend kiểm tra trạng thái
+    // This effect simulates polling the backend to check for payment confirmation.
+    // In a real app, this is more robustly handled with WebSockets for real-time updates.
     useEffect(() => {
-        if (orderId) {
-            console.log("[FRONTEND] Bắt đầu kiểm tra trạng thái đơn hàng...");
-            const fakeWebhookTimeout = setTimeout(() => {
-                // BƯỚC 3: (PAYOS -> BACKEND - Webhook)
-                // Đây là bước quan trọng nhất, diễn ra ẩn ở phía server.
-                // PayOS gọi đến webhook của bạn. Backend dùng Checksum Key để xác thực.
-                // Nếu hợp lệ, backend MỚI cộng credit cho user trong database.
-                console.log(`[BACKEND] Đã nhận và xác thực webhook cho đơn hàng ${orderId}. Cộng credit vào database.`);
-                setPaymentSuccess(true);
-            }, 5000); // Giả lập 5 giây sau người dùng thanh toán thành công
-            
-            return () => clearTimeout(fakeWebhookTimeout);
-        }
-    }, [orderId]);
+        if (!orderId || paymentSuccess) return;
+
+        console.log(`[FRONTEND] Started polling for payment status of order: ${orderId}`);
+        
+        // This timeout simulates the user taking time to pay and the backend receiving the webhook.
+        const confirmationTimeout = setTimeout(() => {
+             // STEP 3: (PAYOS -> YOUR BACKEND - Webhook)
+            // This is the most critical server-side step. PayOS sends a webhook to your server.
+            // Your backend validates it using the CHECKSUM_KEY and, if valid, updates the database (e.g., adds credits to the user).
+            // Our polling here is just asking the backend "Did the webhook arrive yet?".
+            console.log(`[BACKEND->FRONTEND] Payment for order ${orderId} is successful!`);
+            setPaymentSuccess(true);
+        }, 5000); // Simulate a 5-second delay for payment.
+
+        // Cleanup function to stop polling when the component unmounts
+        return () => clearTimeout(confirmationTimeout);
+    }, [orderId, paymentSuccess]);
 
 
     if (paymentSuccess) {
@@ -105,12 +117,15 @@ const TopUpPage: React.FC<TopUpPageProps> = ({ navigate }) => {
                     <span className="text-indigo-400">{selectedPlan.price.toLocaleString('vi-VN')} VNĐ</span>
                 </div>
             </div>
+             <div className="mt-4 text-xs text-center text-gray-400">
+                <p>Bảo mật bởi PayOS. Backend sử dụng `PAYOS_API_KEY` và `PAYOS_CHECKSUM_KEY` từ biến môi trường để xử lý giao dịch an toàn.</p>
+            </div>
 
             {!qrCodeUrl ? (
                 <button
                     onClick={handleGenerateQR}
                     disabled={isProcessing}
-                    className="w-full mt-8 flex items-center justify-center bg-blue-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-600 disabled:bg-blue-400 transition-all"
+                    className="w-full mt-4 flex items-center justify-center bg-blue-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-600 disabled:bg-blue-400 transition-all"
                 >
                     {isProcessing ? <SpinnerIcon className="w-5 h-5" /> : 'Thanh toán bằng PayOS QR'}
                 </button>
