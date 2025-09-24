@@ -80,15 +80,8 @@ const UserMenu: React.FC<{ user: User; logout: () => void; navigate: (page: Page
 const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
     const { user, login, logout } = useAuth();
     
-    // ========================================================================
-    // IMPORTANT: GOOGLE CLIENT ID CONFIGURATION
-    // ========================================================================
-    // The Google Client ID is loaded from an environment variable for security.
-    // Create a `.env.local` file in the project root and add:
-    // REACT_APP_GOOGLE_CLIENT_ID='YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'
-    // See `.env.example` for detailed instructions.
+    // The Google Client ID is expected to be provided via environment variables.
     const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-
 
     const handleGoogleLoginCallback = (response: any) => {
         if (!response.credential) {
@@ -108,24 +101,18 @@ const Header: React.FC<HeaderProps> = ({ navigate, currentPage }) => {
     };
 
     useEffect(() => {
-        if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID')) {
-            console.error(`
-                *******************************************************************************
-                * Google Sign-In is not configured.                                           *
-                *                                                                             *
-                * Please create a .env.local file and add your Google Client ID.              *
-                * Example: REACT_APP_GOOGLE_CLIENT_ID='YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com' *
-                * Refer to the .env.example file for more details.                            *
-                *******************************************************************************
-            `);
-            const loginButtonDiv = document.getElementById('google-login-button-container');
-            if (loginButtonDiv) {
-                loginButtonDiv.innerHTML = '<div class="px-4 py-2 text-sm text-yellow-300 bg-yellow-900/50 rounded-md">Google Login not configured</div>';
-            }
-            return;
-        }
+        const isClientIdMissing = !GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID');
 
         if (window.google && !user) {
+            if (isClientIdMissing) {
+                console.warn("Google Client ID is not configured. Google Sign-In is disabled.");
+                const loginButtonDiv = document.getElementById('google-login-button-container');
+                if (loginButtonDiv) {
+                    loginButtonDiv.innerHTML = '<div class="px-4 py-2 text-sm text-yellow-300 bg-yellow-900/50 rounded-md">Google Login unavailable</div>';
+                }
+                return;
+            }
+
             try {
                 window.google.accounts.id.initialize({
                     client_id: GOOGLE_CLIENT_ID,
