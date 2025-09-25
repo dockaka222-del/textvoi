@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { SpinnerIcon } from '../components/icons/SpinnerIcon';
@@ -212,6 +213,12 @@ const HomePage: React.FC = () => {
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         <p className="mt-2 text-red-400 font-semibold">Chuyển đổi thất bại</p>
                         <p className="mt-1 text-sm text-gray-400 text-center">{errorMessage}</p>
+                        <button
+                            onClick={handleConvert}
+                            className="mt-4 bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-500 transition-colors"
+                        >
+                            Thử lại
+                        </button>
                     </div>
                 );
             case 'idle':
@@ -344,7 +351,12 @@ const HomePage: React.FC = () => {
                                 className="w-full flex items-center justify-center bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg shadow-indigo-600/20 hover:shadow-xl hover:shadow-indigo-500/30 disabled:from-indigo-500 disabled:to-purple-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500 text-lg"
                                 aria-busy={isProcessing}
                             >
-                                {isProcessing ? 'Đang xử lý...' : 'Chuyển đổi thành giọng nói'}
+                                {isProcessing ? (
+                                    <>
+                                        <SpinnerIcon className="w-5 h-5 mr-3" />
+                                        Đang xử lý...
+                                    </>
+                                ) : 'Chuyển đổi thành giọng nói'}
                             </button>
                         </div>
                         {renderOutput()}

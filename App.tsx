@@ -28,6 +28,18 @@ const AppContent: React.FC = () => {
             case 'top-up':
                 return <TopUpPage navigate={navigate} />;
             case 'admin':
+                // ========================================================================
+                // CẢNH BÁO BẢO MẬT NGHIÊM TRỌNG (CRITICAL SECURITY WARNING)
+                // ========================================================================
+                // Việc kiểm tra `user?.role === 'admin'` ở phía CLIENT-SIDE chỉ dùng
+                // để hiển thị/ẩn giao diện và CỰC KỲ KHÔNG AN TOÀN. Bất kỳ người dùng
+                // nào cũng có thể giả mạo vai trò 'admin' trên trình duyệt của họ.
+                //
+                // **YÊU CẦU BẮT BUỘC:** Tất cả các API endpoint dành cho admin
+                // (ví dụ: /api/users, /api/analytics,...) PHẢI được bảo vệ ở phía
+                // BACKEND. Backend phải xác thực JWT token và kiểm tra vai trò 'admin'
+                // trên MỌI request trước khi trả về dữ liệu.
+                // ========================================================================
                 return user?.role === 'admin' ? <AdminDashboard /> : <HomePage />;
             case 'transaction-history':
                 return user ? <TransactionHistoryPage /> : <HomePage />;
