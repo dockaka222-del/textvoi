@@ -72,11 +72,12 @@ const GoogleSignInButton: React.FC = () => {
 
     }, [login]);
 
-    // Nếu Client ID chưa được cấu hình, hiển thị một nút thông báo lỗi rõ ràng.
+    // Nếu Client ID chưa được cấu hình, hiển thị một nút thông báo lỗi rõ ràng và hữu ích.
     if (GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com') {
         return (
-            <div className="bg-yellow-500 text-black text-sm font-semibold px-4 py-2 rounded-md">
-                Google Login not configured
+            <div className="bg-yellow-500 text-black text-xs font-semibold px-3 py-2 rounded-md text-center">
+                <p>Cần cấu hình Google Login</p>
+                <p className="font-mono mt-1 opacity-80">Sửa file: GoogleSignInButton.tsx</p>
             </div>
         );
     }
