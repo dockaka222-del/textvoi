@@ -8,19 +8,20 @@ interface TopUpPageProps {
 }
 
 // ========================================================================
-// NOTE FOR DEVELOPER on .env configuration for PayOS:
+// NOTE FOR DEVELOPER on .env configuration for PayOS on the BACKEND:
 // ========================================================================
-// The following workflow simulates a SECURE backend integration.
-// Your backend server (e.g., Node.js) should have a `.env` file with
-// the following keys provided by PayOS:
+// Luồng thanh toán này mô phỏng một tích hợp an toàn với Backend.
+// Server backend (ví dụ: Node.js) của bạn PHẢI có một file `.env`
+// chứa các key bí mật do PayOS cung cấp:
 //
+// File .env trên SERVER:
 // PAYOS_CLIENT_ID='your-client-id'
 // PAYOS_API_KEY='your-api-key'
 // PAYOS_CHECKSUM_KEY='your-checksum-key'
 //
-// Your backend code must load these variables and use them to securely
-// communicate with the PayOS API. The frontend should NEVER handle these keys.
-// The frontend only calls your backend to get a payment link/QR code.
+// Backend sẽ tải các biến này và sử dụng chúng để giao tiếp an toàn với
+// API của PayOS. Frontend KHÔNG BAO GIỜ được phép xử lý các key này.
+// Frontend chỉ gọi đến backend của bạn để lấy link thanh toán/mã QR.
 // ========================================================================
 
 const TopUpPage: React.FC<TopUpPageProps> = ({ navigate }) => {
@@ -43,9 +44,9 @@ const TopUpPage: React.FC<TopUpPageProps> = ({ navigate }) => {
         setQrCodeUrl(null);
 
         // STEP 1: (FRONTEND -> YOUR BACKEND)
-        // Request your backend to create a payment link.
-        // Your backend will then securely call the PayOS API using its secret API Key and Checksum Key.
-        // !! NEVER CALL PAYOS API DIRECTLY FROM THE FRONTEND. !!
+        // Yêu cầu backend tạo một link thanh toán.
+        // Backend sẽ gọi API của PayOS một cách an toàn bằng cách sử dụng
+        // PAYOS_API_KEY và PAYOS_CHECKSUM_KEY từ file .env của nó.
         try {
             console.log(`[FRONTEND] Calling backend to create payment link for plan: "${selectedPlan.name}"...`);
             // --- This part simulates the API call ---
@@ -61,7 +62,7 @@ const TopUpPage: React.FC<TopUpPageProps> = ({ navigate }) => {
             console.log(`[BACKEND->FRONTEND] Response received with orderId: ${fakeOrderId}`);
 
             // STEP 2: (FRONTEND)
-            // Display the QR code received from the backend.
+            // Hiển thị mã QR nhận được từ backend.
             setOrderId(fakeOrderId);
             setQrCodeUrl(fakeQrCode);
 
@@ -83,9 +84,8 @@ const TopUpPage: React.FC<TopUpPageProps> = ({ navigate }) => {
         // This timeout simulates the user taking time to pay and the backend receiving the webhook.
         const confirmationTimeout = setTimeout(() => {
              // STEP 3: (PAYOS -> YOUR BACKEND - Webhook)
-            // This is the most critical server-side step. PayOS sends a webhook to your server.
-            // Your backend validates it using the CHECKSUM_KEY and, if valid, updates the database (e.g., adds credits to the user).
-            // Our polling here is just asking the backend "Did the webhook arrive yet?".
+            // Đây là bước quan trọng nhất phía server. PayOS gửi một webhook đến server của bạn.
+            // Backend xác thực nó bằng CHECKSUM_KEY và cập nhật database (cộng credit cho user).
             console.log(`[BACKEND->FRONTEND] Payment for order ${orderId} is successful!`);
             setPaymentSuccess(true);
         }, 5000); // Simulate a 5-second delay for payment.
@@ -133,7 +133,7 @@ const TopUpPage: React.FC<TopUpPageProps> = ({ navigate }) => {
                 </div>
             </div>
              <div className="mt-4 text-xs text-center text-gray-400">
-                <p>Bảo mật bởi PayOS. Backend sử dụng `PAYOS_API_KEY` và `PAYOS_CHECKSUM_KEY` từ biến môi trường để xử lý giao dịch an toàn.</p>
+                <p>Bảo mật bởi PayOS. Backend sử dụng `PAYOS_API_KEY` và `PAYOS_CHECKSUM_KEY` từ file .env trên server để xử lý giao dịch an toàn.</p>
             </div>
 
             {!qrCodeUrl ? (

@@ -1,11 +1,35 @@
 
-import React, { useState, useMemo } from 'react';
-import { MOCK_USERS } from '../../constants';
+import React, { useState, useMemo, useEffect } from 'react';
 import { User } from '../../types';
+import * as api from '../../services/api'; // *** GẮN API SERVICE VÀO ĐÂY ***
+import { SpinnerIcon } from '../icons/SpinnerIcon';
 
 const UserManagement: React.FC = () => {
-    const [users, setUsers] = useState<User[]>(MOCK_USERS);
+    const [users, setUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+
+    // *** THAY THẾ DỮ LIỆU TĨNH BẰNG LỜI GỌI API KHI COMPONENT TẢI ***
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                setIsLoading(true);
+                const fetchedUsers = await api.getUsers();
+                setUsers(fetchedUsers);
+                setError(null);
+            } catch (err) {
+                setError('Không thể tải danh sách người dùng. Vui lòng thử lại.');
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchUsers();
+    }, []);
+
 
     const filteredUsers = useMemo(() => {
         return users.filter(user =>
@@ -15,6 +39,8 @@ const UserManagement: React.FC = () => {
     }, [searchTerm, users]);
     
     const handleDeleteUser = (userId: string) => {
+        // Trong ứng dụng thật, bạn sẽ gọi API để xóa
+        // await api.deleteUser(userId);
         if (window.confirm('Bạn có chắc chắn muốn xóa người dùng này không?')) {
             setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
         }
@@ -23,6 +49,15 @@ const UserManagement: React.FC = () => {
     const handleEditUser = (userId: string) => {
         alert(`(Mô phỏng) Chuyển đến trang chỉnh sửa cho người dùng ID: ${userId}`);
     };
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-64"><SpinnerIcon className="w-8 h-8" /></div>;
+    }
+
+    if (error) {
+        return <div className="text-center text-red-500">{error}</div>;
+    }
+
 
     return (
         <div>

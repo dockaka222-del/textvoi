@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { SpinnerIcon } from '../components/icons/SpinnerIcon';
+import * as api from '../services/api'; // *** GẮN API SERVICE VÀO ĐÂY ***
 
 interface CustomVoice {
     id: string;
@@ -52,7 +53,7 @@ const HomePage: React.FC = () => {
         return 'text-gray-300';
     };
     
-    const handleConvert = () => {
+    const handleConvert = async () => { // *** Chuyển thành hàm async ***
         if (!text || isLoading) return;
         
         if (user) {
@@ -74,31 +75,23 @@ const HomePage: React.FC = () => {
         setIsLoading(true);
         setAudioUrl(null);
 
-        // Simulate API call to a real, high-quality TTS engine.
-        setTimeout(() => {
-            try {
-                 // If a custom voice is selected, we would ideally use a different API endpoint
-                if (voice.startsWith('custom-')) {
-                    console.log(`Converting text using custom voice profile: ${voice}`);
-                }
-
-                // In a real app, the API would return a URL to the generated audio file.
-                // For this demonstration, we use high-quality pre-recorded samples.
-                const sampleUrl = voiceSamples[voice] || voiceSamples['vi-VN-Standard-A'];
-                const finalUrl = voice.startsWith('custom-') ? voiceSamples['vi-VN-Standard-A'] : sampleUrl;
-
-                setAudioUrl(finalUrl);
-                if (!user) { // Decrement trial for guest
-                    decrementTrialCount();
-                }
-
-            } catch (error) {
-                console.error("Lỗi chuyển đổi giọng nói:", error);
-                alert("Đã xảy ra lỗi trong quá trình chuyển đổi.");
-            } finally {
-                setIsLoading(false);
+        // *** THAY THẾ setTimeout BẰNG LỜI GỌI API THỰC TẾ ***
+        try {
+            const response = await api.convertTextToSpeech(text, voice);
+            setAudioUrl(response.audioUrl);
+            
+            if (!user) { // Decrement trial for guest
+                decrementTrialCount();
             }
-        }, 1500);
+            // Trong ứng dụng thực tế, bạn sẽ cập nhật số credit của người dùng ở đây
+            // Dựa trên `response.creditsUsed`
+            
+        } catch (error) {
+            console.error("Lỗi chuyển đổi giọng nói:", error);
+            alert(`Đã xảy ra lỗi: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // New handlers for voice cloning
@@ -167,7 +160,7 @@ const HomePage: React.FC = () => {
             return (
                 <div className="bg-gray-800/50 p-4 rounded-lg">
                     <h3 className="text-lg font-semibold mb-2 text-center text-white">Kết quả</h3>
-                    <p className="text-center text-sm text-gray-400 mb-4">Lưu ý: Đây là bản phát lại. API thực tế sẽ cung cấp file MP3 để tải về.</p>
+                    <p className="text-center text-sm text-gray-400 mb-4">File âm thanh đã được tạo thành công.</p>
                     <audio key={audioUrl} controls autoPlay className="w-full" src={audioUrl}>
                         Trình duyệt của bạn không hỗ trợ phát âm thanh.
                     </audio>
