@@ -27,7 +27,7 @@ const NavLink: React.FC<{
 );
 
 
-const UserMenu: React.FC<{ user: User; logout: () => void; navigate: (page: Page) => void }> = ({ user, logout, navigate }) => {
+const UserMenu: React.FC<{ user: any; logout: () => void; navigate: (page: Page) => void }> = ({ user, logout, navigate }) => {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +49,7 @@ const UserMenu: React.FC<{ user: User; logout: () => void; navigate: (page: Page
     return (
         <div className="relative" ref={menuRef}>
             <button onClick={() => setIsOpen(!isOpen)} className="flex items-center space-x-2">
-                <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full" />
+                <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-full" />
                 <span className="text-white font-medium hidden sm:block">{user.name}</span>
             </button>
             {isOpen && (
@@ -57,13 +57,14 @@ const UserMenu: React.FC<{ user: User; logout: () => void; navigate: (page: Page
                     <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                         <div className="px-4 py-2 text-sm text-gray-700 border-b">
                             <p className="font-semibold">{user.name}</p>
-                            <p className="text-gray-500 truncate">{user.email}</p>
-                            <p className="text-indigo-600 font-bold mt-1">{user.credits.toLocaleString('vi-VN')} credits</p>
+                            <p className="text-gray-500 truncate">{user.sub}</p>
+                            {/* Credits display needs to be re-integrated with backend logic */}
+                            {/* <p className="text-indigo-600 font-bold mt-1">{user.credits.toLocaleString('vi-VN')} credits</p> */}
                         </div>
                          <a href="#" onClick={(e) => { e.preventDefault(); handleNavigate('top-up'); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Nạp Credit</a>
                          <a href="#" onClick={(e) => { e.preventDefault(); handleNavigate('file-history'); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Lịch sử Tệp Âm thanh</a>
                          <a href="#" onClick={(e) => { e.preventDefault(); handleNavigate('transaction-history'); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Lịch sử Giao dịch</a>
-                        {user.role === 'admin' && (
+                        {user.isAdmin && (
                            <a href="#" onClick={(e) => { e.preventDefault(); handleNavigate('admin'); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t" role="menuitem">Bảng điều khiển Admin</a>
                         )}
                         <a href="#" onClick={(e) => { e.preventDefault(); logout(); setIsOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 border-t" role="menuitem">Đăng xuất</a>

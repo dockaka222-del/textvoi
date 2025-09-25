@@ -2,10 +2,21 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import { User } from '../types';
 import * as api from '../services/api';
 
+// This is the shape of the user object decoded from the JWT
+interface AuthUser {
+  sub: string; // email
+  name: string;
+  picture: string;
+  isAdmin: boolean;
+  iat: number;
+  exp: number;
+}
+
+
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   token: string | null;
-  login: (credential: string) => Promise<void>;
+  login: (idToken: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   trialCount: number;
@@ -14,17 +25,38 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper to decode JWT. NOTE: This does NOT validate the signature.
+// Validation happens on the backend. This is just for reading data on the client.
+const decodeJwt = (token: string): AuthUser | null => {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        console.error("Failed to decode JWT", e);
+        return null;
+    }
+}
+
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [trialCount, setTrialCount] = useState<number>(10);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('authToken');
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-      setToken(storedToken);
+    if (storedToken) {
+      const decodedUser = decodeJwt(storedToken);
+      if (decodedUser && decodedUser.exp * 1000 > Date.now()) {
+          setUser(decodedUser);
+          setToken(storedToken);
+      } else {
+          localStorage.removeItem('authToken');
+      }
     } else {
       const storedTrials = localStorage.getItem('guestTrialCount');
       if (storedTrials !== null) {
@@ -44,23 +76,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
   };
 
-  const login = async (credential: string) => {
+  const login = async (idToken: string) => {
     try {
-        // Gửi credential đến backend để xác thực và lấy thông tin user + JWT token
-        const { user: loggedInUser, token: authToken } = await api.loginWithGoogle(credential);
-        
-        setUser(loggedInUser);
-        setToken(authToken);
+        const { token: authToken } = await api.loginWithGoogle(idToken);
+        const decodedUser = decodeJwt(authToken);
 
-        // Lưu thông tin vào localStorage
-        localStorage.setItem('user', JSON.stringify(loggedInUser));
-        localStorage.setItem('authToken', authToken);
-        localStorage.removeItem('guestTrialCount');
+        if (decodedUser) {
+            setUser(decodedUser);
+            setToken(authToken);
+            localStorage.setItem('authToken', authToken);
+            localStorage.removeItem('guestTrialCount');
+        } else {
+            throw new Error("Failed to decode token received from server.");
+        }
 
     } catch (error) {
         console.error("Login failed:", error);
         alert("Đăng nhập thất bại. Vui lòng thử lại.");
-        // Đảm bảo dọn dẹp state nếu có lỗi
         logout();
     }
   };
@@ -68,9 +100,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('user');
     localStorage.removeItem('authToken');
-    // Reset guest trials
     setTrialCount(10);
     localStorage.setItem('guestTrialCount', '10');
   };

@@ -9,7 +9,7 @@ interface CustomVoice {
     name: string;
 }
 
-type JobStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed';
+type JobStatus = 'idle' | 'queued' | 'processing' | 'done' | 'error';
 
 const HomePage: React.FC = () => {
     const { user, trialCount, decrementTrialCount } = useAuth();
@@ -39,42 +39,42 @@ const HomePage: React.FC = () => {
     
     // Effect for polling job status
     useEffect(() => {
-        // Stop polling if there's no job or job is finished
-        if (!jobId || jobStatus === 'completed' || jobStatus === 'failed') {
+        if (!jobId || jobStatus === 'done' || jobStatus === 'error') {
             return;
         }
 
         const intervalId = setInterval(async () => {
             try {
                 const response = await api.getConversionStatus(jobId);
-                // Convert backend status (UPPERCASE) to frontend status (lowercase)
-                setJobStatus(response.status.toLowerCase() as JobStatus);
+                setJobStatus(response.status);
 
-                if (response.status === 'COMPLETED') {
-                    setAudioUrl(response.audioUrl || null);
+                if (response.status === 'done') {
+                    setAudioUrl(response.url || null);
                     setJobId(null); // Stop polling
-                } else if (response.status === 'FAILED') {
+                } else if (response.status === 'error') {
                     setErrorMessage(response.error || 'Quá trình chuyển đổi thất bại.');
                     setJobId(null); // Stop polling
                 }
             } catch (error) {
                 console.error('Polling error:', error);
                 setErrorMessage('Lỗi khi kiểm tra trạng thái. Vui lòng thử lại.');
-                setJobStatus('failed');
+                setJobStatus('error');
                 setJobId(null); // Stop polling
             }
-        }, 3000); // Poll every 3 seconds
+        }, 3000);
 
-        // Cleanup function to stop polling when component unmounts or job finishes
         return () => clearInterval(intervalId);
     }, [jobId, jobStatus]);
 
 
     const getCharCountColor = () => {
+        // Credit logic needs to be tied to a proper user object from a DB
         if (user) {
-            if (!user.credits) return 'text-gray-400';
-            if (charCount > user.credits) return 'text-red-500 font-semibold';
-            if (charCount > user.credits * 0.8) return 'text-yellow-400 font-medium';
+            // Placeholder credit logic
+            // if (!user.credits) return 'text-gray-400';
+            // if (charCount > user.credits) return 'text-red-500 font-semibold';
+            // if (charCount > user.credits * 0.8) return 'text-yellow-400 font-medium';
+            return 'text-gray-300'
         } else { // Guest mode
             if (charCount > 100) return 'text-red-500 font-semibold';
         }
@@ -82,13 +82,10 @@ const HomePage: React.FC = () => {
     };
     
     const handleConvert = async () => {
-        if (!text || jobId) return; // Prevent starting a new job while one is running
+        if (!text || jobId) return;
         
         if (user) {
-            if (charCount > user.credits) {
-                alert('Bạn không đủ credit để thực hiện chuyển đổi này.');
-                return;
-            }
+            // Credit check logic would go here
         } else { // Guest logic
             if (trialCount <= 0) {
                 alert('Bạn đã hết lượt dùng thử. Vui lòng đăng nhập để tiếp tục.');
@@ -100,27 +97,22 @@ const HomePage: React.FC = () => {
             }
         }
         
-        // Reset state for a new job
-        setJobStatus('pending');
+        setJobStatus('queued');
         setAudioUrl(null);
         setErrorMessage(null);
         setJobId(null);
 
         try {
-            // Start the job, get back a jobId
             const response = await api.startConversionJob(text, voice);
-            setJobId(response.jobId);
+            setJobId(response.id);
             
-            if (!user) { // Decrement trial for guest immediately
+            if (!user) {
                 decrementTrialCount();
             }
-            // In a real app, credits are deducted by the backend upon successful job completion.
-            // The frontend might need to refetch user data after.
-            
         } catch (error) {
             console.error("Lỗi khi bắt đầu chuyển đổi:", error);
             setErrorMessage(`Đã xảy ra lỗi khi gửi yêu cầu: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            setJobStatus('failed');
+            setJobStatus('error');
         }
     };
 
@@ -134,15 +126,12 @@ const HomePage: React.FC = () => {
 
     const handleCloneVoice = () => {
         if (!customVoiceFile) return;
-
         setIsCloning(true);
         setCloneSuccessMessage('');
-
         setTimeout(() => {
             const newVoiceId = `custom-${Date.now()}`;
             const newVoiceName = `Tùy chỉnh - ${customVoiceFile.name.split('.').slice(0, -1).join('.')}`;
             const newVoice: CustomVoice = { id: newVoiceId, name: newVoiceName };
-            
             setCustomVoices(prev => [...prev, newVoice]);
             setVoice(newVoiceId);
             setCustomVoiceFile(null);
@@ -154,7 +143,6 @@ const HomePage: React.FC = () => {
     const handleTextFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
-
         setUploadedTextFileName(file.name);
         const reader = new FileReader();
         reader.onload = (e) => setText(e.target?.result as string);
@@ -163,7 +151,6 @@ const HomePage: React.FC = () => {
             alert("Không thể đọc file. Vui lòng thử lại với file .txt.");
             setUploadedTextFileName(null);
         }
-        
         if(file.name.endsWith('.txt')) {
              reader.readAsText(file);
         } else {
@@ -180,21 +167,15 @@ const HomePage: React.FC = () => {
 
     const renderOutput = () => {
         switch (jobStatus) {
-            case 'pending':
+            case 'queued':
+            case 'processing': // Grouping queued and processing for a simpler UI
                 return (
                     <div className="flex flex-col items-center justify-center h-48 bg-gray-800/50 rounded-lg">
                         <SpinnerIcon className="w-8 h-8 text-indigo-400" />
-                        <p className="mt-4 text-gray-300">Yêu cầu đã được đưa vào hàng đợi...</p>
+                        <p className="mt-4 text-gray-300">{jobStatus === 'queued' ? 'Yêu cầu đã được đưa vào hàng đợi...' : 'Đang xử lý...'}</p>
                     </div>
                 );
-            case 'processing':
-                return (
-                    <div className="flex flex-col items-center justify-center h-48 bg-gray-800/50 rounded-lg">
-                        <SpinnerIcon className="w-8 h-8 text-indigo-400" />
-                        <p className="mt-4 text-gray-300">Đang xử lý, tác vụ lớn có thể mất vài phút...</p>
-                    </div>
-                );
-            case 'completed':
+            case 'done':
                 if (audioUrl) {
                     return (
                         <div className="bg-gray-800/50 p-4 rounded-lg">
@@ -206,8 +187,8 @@ const HomePage: React.FC = () => {
                             <div className="mt-4 text-center">
                                 <a
                                     href={audioUrl}
-                                    download={`aivoice_studio_${Date.now()}.wav`} // Suggest a filename
-                                    target="_blank" // Open in new tab as fallback
+                                    download={`aivoice_studio_${Date.now()}.wav`}
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
                                 >
@@ -219,8 +200,8 @@ const HomePage: React.FC = () => {
                         </div>
                     );
                 }
-                return renderIdleState(); // Fallback if URL is missing
-            case 'failed':
+                return renderIdleState();
+            case 'error':
                  return (
                     <div className="flex flex-col items-center justify-center h-48 bg-gray-800/50 border-2 border-dashed border-red-700 rounded-lg p-4">
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -240,7 +221,7 @@ const HomePage: React.FC = () => {
         }
     };
 
-    const isProcessing = jobStatus === 'pending' || jobStatus === 'processing';
+    const isProcessing = jobStatus === 'queued' || jobStatus === 'processing';
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
@@ -261,9 +242,7 @@ const HomePage: React.FC = () => {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                {/* Left Column: Input & Config */}
                 <div className="lg:col-span-3 space-y-6">
-                    {/* Text Input Section */}
                     <div className="bg-gray-800/50 p-6 rounded-2xl shadow-lg">
                          <h2 className="text-xl font-semibold mb-4 flex items-center">
                             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 mr-3 text-white font-bold">1</span>
@@ -278,7 +257,7 @@ const HomePage: React.FC = () => {
                                 aria-label="Văn bản cần chuyển đổi"
                             />
                             <div className={`absolute bottom-3 right-3 text-sm px-3 py-1 rounded-full bg-gray-900/80 backdrop-blur-sm transition-colors duration-300 ${getCharCountColor()}`}>
-                               {charCount.toLocaleString('vi-VN')} / {user ? user.credits.toLocaleString('vi-VN') : '100'}
+                               {charCount.toLocaleString('vi-VN')} / {user ? 'Không giới hạn' : '100'}
                             </div>
                         </div>
                         {user && (
@@ -294,7 +273,6 @@ const HomePage: React.FC = () => {
                         )}
                     </div>
                     
-                    {/* Voice Config Section */}
                     <div className="bg-gray-800/50 p-6 rounded-2xl shadow-lg">
                         <h2 className="text-xl font-semibold mb-4 flex items-center">
                             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 mr-3 text-white font-bold">2</span>
@@ -350,7 +328,6 @@ const HomePage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Right Column: Action & Output */}
                 <div className="lg:col-span-2">
                     <div className="sticky top-24 space-y-6">
                          <div className="bg-gray-800/50 p-6 rounded-2xl shadow-lg">
@@ -360,7 +337,7 @@ const HomePage: React.FC = () => {
                             </h2>
                             <button
                                 onClick={handleConvert}
-                                disabled={isProcessing || (user && (charCount === 0 || charCount > user.credits)) || (!user && (charCount === 0 || charCount > 100 || trialCount <= 0))}
+                                disabled={isProcessing || (!user && (charCount === 0 || charCount > 100 || trialCount <= 0))}
                                 className="w-full flex items-center justify-center bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg shadow-indigo-600/20 hover:shadow-xl hover:shadow-indigo-500/30 disabled:from-indigo-500 disabled:to-purple-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500 text-lg"
                                 aria-busy={isProcessing}
                             >

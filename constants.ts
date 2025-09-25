@@ -1,4 +1,3 @@
-
 import { PricingPlan, User, DiscountCode, Transaction, GeneratedFile } from './types';
 
 export const MOCK_ADMIN_USER: User = {
@@ -62,25 +61,27 @@ export const MOCK_DISCOUNT_CODES: DiscountCode[] = [
     { id: 'code_3', code: 'OLDCODE', discountPercent: 10, status: 'expired', expiryDate: '2023-12-31' },
 ];
 
+// FIX: Updated `userId` to use email addresses to match the identifier from the JWT-based authentication (`user.sub`).
 export const MOCK_TRANSACTIONS: Transaction[] = [
-    { id: 'txn_1', userId: 'user_1', userName: 'Nguyễn Văn A', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-20' },
-    { id: 'txn_2', userId: 'user_2', userName: 'Trần Thị B', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-19' },
-    { id: 'txn_3', userId: 'user_4', userName: 'Phạm Minh D', planId: 'plan_business', planName: 'Doanh nghiệp', amount: 799000, date: '2024-07-18' },
-    { id: 'txn_4', userId: 'user_1', userName: 'Nguyễn Văn A', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-15' },
-    { id: 'txn_5', userId: 'user01', userName: 'Người Dùng', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-12' },
-    { id: 'txn_6', userId: 'user_2', userName: 'Trần Thị B', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-10' },
-    { id: 'txn_7', userId: 'user01', userName: 'Người Dùng', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-09' },
-    { id: 'txn_8', userId: 'user_4', userName: 'Phạm Minh D', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-05' },
-    { id: 'txn_9', userId: 'user_1', userName: 'Nguyễn Văn A', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-02' },
-    { id: 'txn_10', userId: 'user_2', userName: 'Trần Thị B', planId: 'plan_business', planName: 'Doanh nghiệp', amount: 799000, date: '2024-06-28' },
+    { id: 'txn_1', userId: 'vana@example.com', userName: 'Nguyễn Văn A', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-20' },
+    { id: 'txn_2', userId: 'thib@example.com', userName: 'Trần Thị B', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-19' },
+    { id: 'txn_3', userId: 'minhd@example.com', userName: 'Phạm Minh D', planId: 'plan_business', planName: 'Doanh nghiệp', amount: 799000, date: '2024-07-18' },
+    { id: 'txn_4', userId: 'vana@example.com', userName: 'Nguyễn Văn A', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-15' },
+    { id: 'txn_5', userId: 'user@example.com', userName: 'Người Dùng', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-12' },
+    { id: 'txn_6', userId: 'thib@example.com', userName: 'Trần Thị B', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-10' },
+    { id: 'txn_7', userId: 'user@example.com', userName: 'Người Dùng', planId: 'plan_starter', planName: 'Khởi đầu', amount: 99000, date: '2024-07-09' },
+    { id: 'txn_8', userId: 'minhd@example.com', userName: 'Phạm Minh D', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-05' },
+    { id: 'txn_9', userId: 'vana@example.com', userName: 'Nguyễn Văn A', planId: 'plan_pro', planName: 'Chuyên nghiệp', amount: 249000, date: '2024-07-02' },
+    { id: 'txn_10', userId: 'thib@example.com', userName: 'Trần Thị B', planId: 'plan_business', planName: 'Doanh nghiệp', amount: 799000, date: '2024-06-28' },
 ];
 
 
 const now = new Date();
+// FIX: Updated `userId` to use email addresses to match the identifier from the JWT-based authentication (`user.sub`).
 export const MOCK_GENERATED_FILES: GeneratedFile[] = [
     { 
         id: 'file_1', 
-        userId: 'user01', 
+        userId: 'user@example.com', 
         textSnippet: 'Chào mừng bạn đến với AI Voice Studio...',
         voice: 'Giọng Nữ Miền Bắc (Mai)',
         charCount: 45,
@@ -89,7 +90,7 @@ export const MOCK_GENERATED_FILES: GeneratedFile[] = [
     },
     { 
         id: 'file_2', 
-        userId: 'user01', 
+        userId: 'user@example.com', 
         textSnippet: 'Đây là một thử nghiệm cho giọng đọc tin tức...',
         voice: 'Giọng đọc tin tức',
         charCount: 150,
@@ -98,7 +99,7 @@ export const MOCK_GENERATED_FILES: GeneratedFile[] = [
     },
     { 
         id: 'file_3', 
-        userId: 'user01', 
+        userId: 'user@example.com', 
         textSnippet: 'Một tệp âm thanh đã được tạo ra từ khá lâu...',
         voice: 'Giọng Nam Miền Nam (Gia Hưng)',
         charCount: 88,
@@ -107,7 +108,7 @@ export const MOCK_GENERATED_FILES: GeneratedFile[] = [
     },
      { 
         id: 'file_4', 
-        userId: 'user_2', // Belongs to another user
+        userId: 'thib@example.com', // Belongs to another user
         textSnippet: 'File này không thuộc về người dùng đang đăng nhập...',
         voice: 'Giọng Nữ Miền Nam (Ban Mai)',
         charCount: 120,

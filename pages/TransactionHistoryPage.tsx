@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { MOCK_TRANSACTIONS } from '../constants';
@@ -7,7 +6,8 @@ const TransactionHistoryPage: React.FC = () => {
     const { user } = useAuth();
 
     // Filter transactions for the logged-in user
-    const userTransactions = MOCK_TRANSACTIONS.filter(txn => txn.userId === user?.id);
+    // FIX: Use `user.sub` which holds the email as the unique identifier from the JWT, instead of the non-existent `user.id`.
+    const userTransactions = MOCK_TRANSACTIONS.filter(txn => txn.userId === user?.sub);
     
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);

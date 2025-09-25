@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { MOCK_GENERATED_FILES } from '../constants';
@@ -9,7 +8,8 @@ const FILE_EXPIRATION_HOURS = 72;
 const FileHistoryPage: React.FC = () => {
     const { user } = useAuth();
 
-    const userFiles = MOCK_GENERATED_FILES.filter(file => file.userId === user?.id);
+    // FIX: Use `user.sub` which holds the email as the unique identifier from the JWT, instead of the non-existent `user.id`.
+    const userFiles = MOCK_GENERATED_FILES.filter(file => file.userId === user?.sub);
 
     const getFileStatus = (file: GeneratedFile): { isExpired: boolean, timeLeft: string } => {
         const createdAt = new Date(file.createdAt);

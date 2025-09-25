@@ -54,6 +54,7 @@ const GoogleSignInButton: React.FC = () => {
                 client_id: GOOGLE_CLIENT_ID,
                 callback: async (response) => {
                     if (response.credential) {
+                        // The credential IS the idToken
                         await login(response.credential);
                     } else {
                         console.error("Google credential not found in response.");
