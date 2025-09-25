@@ -1,60 +1,87 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { SpinnerIcon } from '../components/icons/SpinnerIcon';
-import * as api from '../services/api'; // *** GẮN API SERVICE VÀO ĐÂY ***
+import * as api from '../services/api';
 
 interface CustomVoice {
     id: string;
     name: string;
 }
 
-const voiceSamples: Record<string, string> = {
-    'vi-VN-Wavenet-A': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Wavenet-A.wav',
-    'vi-VN-News-A': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Wavenet-A.wav', // Using Wavenet-A as a stand-in
-    'vi-VN-Standard-A': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-A.wav',
-    'vi-VN-Standard-B': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-B.wav',
-    'vi-VN-Standard-C': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-C.wav',
-    'vi-VN-Standard-D': 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-D.wav',
-};
-
+type JobStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed';
 
 const HomePage: React.FC = () => {
     const { user, trialCount, decrementTrialCount } = useAuth();
     const [text, setText] = useState('Chào mừng bạn đến với AI Voice Studio. Hãy nhập văn bản bạn muốn chuyển đổi tại đây.');
     const [voice, setVoice] = useState('vi-VN-Standard-A');
-    const [isLoading, setIsLoading] = useState(false);
-    const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [charCount, setCharCount] = useState(0);
 
-    // New state for voice cloning feature
+    // State for async job handling
+    const [jobStatus, setJobStatus] = useState<JobStatus>('idle');
+    const [jobId, setJobId] = useState<string | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    
+    // State for voice cloning feature
     const [customVoiceFile, setCustomVoiceFile] = useState<File | null>(null);
     const [isCloning, setIsCloning] = useState(false);
     const [customVoices, setCustomVoices] = useState<CustomVoice[]>([]);
     const [cloneSuccessMessage, setCloneSuccessMessage] = useState<string>('');
     
-    // New state for text file upload
+    // State for text file upload
     const [uploadedTextFileName, setUploadedTextFileName] = useState<string | null>(null);
 
 
     useEffect(() => {
         setCharCount(text.length);
     }, [text]);
+    
+    // Effect for polling job status
+    useEffect(() => {
+        // Stop polling if there's no job or job is finished
+        if (!jobId || jobStatus === 'completed' || jobStatus === 'failed') {
+            return;
+        }
+
+        const intervalId = setInterval(async () => {
+            try {
+                const response = await api.getConversionStatus(jobId);
+                // Convert backend status (UPPERCASE) to frontend status (lowercase)
+                setJobStatus(response.status.toLowerCase() as JobStatus);
+
+                if (response.status === 'COMPLETED') {
+                    setAudioUrl(response.audioUrl || null);
+                    setJobId(null); // Stop polling
+                } else if (response.status === 'FAILED') {
+                    setErrorMessage(response.error || 'Quá trình chuyển đổi thất bại.');
+                    setJobId(null); // Stop polling
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+                setErrorMessage('Lỗi khi kiểm tra trạng thái. Vui lòng thử lại.');
+                setJobStatus('failed');
+                setJobId(null); // Stop polling
+            }
+        }, 3000); // Poll every 3 seconds
+
+        // Cleanup function to stop polling when component unmounts or job finishes
+        return () => clearInterval(intervalId);
+    }, [jobId, jobStatus]);
+
 
     const getCharCountColor = () => {
         if (user) {
             if (!user.credits) return 'text-gray-400';
             if (charCount > user.credits) return 'text-red-500 font-semibold';
             if (charCount > user.credits * 0.8) return 'text-yellow-400 font-medium';
-        } else {
-            // Guest mode
+        } else { // Guest mode
             if (charCount > 100) return 'text-red-500 font-semibold';
         }
         return 'text-gray-300';
     };
     
-    const handleConvert = async () => { // *** Chuyển thành hàm async ***
-        if (!text || isLoading) return;
+    const handleConvert = async () => {
+        if (!text || jobId) return; // Prevent starting a new job while one is running
         
         if (user) {
             if (charCount > user.credits) {
@@ -71,26 +98,28 @@ const HomePage: React.FC = () => {
                 return;
             }
         }
-
-        setIsLoading(true);
+        
+        // Reset state for a new job
+        setJobStatus('pending');
         setAudioUrl(null);
+        setErrorMessage(null);
+        setJobId(null);
 
-        // *** THAY THẾ setTimeout BẰNG LỜI GỌI API THỰC TẾ ***
         try {
-            const response = await api.convertTextToSpeech(text, voice);
-            setAudioUrl(response.audioUrl);
+            // Start the job, get back a jobId
+            const response = await api.startConversionJob(text, voice);
+            setJobId(response.jobId);
             
-            if (!user) { // Decrement trial for guest
+            if (!user) { // Decrement trial for guest immediately
                 decrementTrialCount();
             }
-            // Trong ứng dụng thực tế, bạn sẽ cập nhật số credit của người dùng ở đây
-            // Dựa trên `response.creditsUsed`
+            // In a real app, credits are deducted by the backend upon successful job completion.
+            // The frontend might need to refetch user data after.
             
         } catch (error) {
-            console.error("Lỗi chuyển đổi giọng nói:", error);
-            alert(`Đã xảy ra lỗi: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        } finally {
-            setIsLoading(false);
+            console.error("Lỗi khi bắt đầu chuyển đổi:", error);
+            setErrorMessage(`Đã xảy ra lỗi khi gửi yêu cầu: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            setJobStatus('failed');
         }
     };
 
@@ -108,15 +137,13 @@ const HomePage: React.FC = () => {
         setIsCloning(true);
         setCloneSuccessMessage('');
 
-        // Simulate backend processing for voice cloning
         setTimeout(() => {
             const newVoiceId = `custom-${Date.now()}`;
             const newVoiceName = `Tùy chỉnh - ${customVoiceFile.name.split('.').slice(0, -1).join('.')}`;
-
             const newVoice: CustomVoice = { id: newVoiceId, name: newVoiceName };
             
             setCustomVoices(prev => [...prev, newVoice]);
-            setVoice(newVoiceId); // Auto-select the new voice
+            setVoice(newVoiceId);
             setCustomVoiceFile(null);
             setIsCloning(false);
             setCloneSuccessMessage(`Tạo giọng đọc "${newVoiceName}" thành công!`);
@@ -129,52 +156,71 @@ const HomePage: React.FC = () => {
 
         setUploadedTextFileName(file.name);
         const reader = new FileReader();
-        reader.onload = (e) => {
-            const fileContent = e.target?.result as string;
-            setText(fileContent);
-        };
+        reader.onload = (e) => setText(e.target?.result as string);
         reader.onerror = (e) => {
             console.error("Lỗi đọc file:", e);
             alert("Không thể đọc file. Vui lòng thử lại với file .txt.");
             setUploadedTextFileName(null);
         }
         
-        // For simplicity, we'll only read .txt files. A real app would need a library for .doc/.docx
         if(file.name.endsWith('.txt')) {
              reader.readAsText(file);
         } else {
              setText(`Đã tải lên file: ${file.name}. (Xem trước nội dung không khả dụng cho file .doc/.docx trong bản demo này.)`);
         }
     };
+    
+    const renderIdleState = () => (
+         <div className="flex flex-col items-center justify-center h-48 bg-gray-800/50 border-2 border-dashed border-gray-700 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 6l12-3" /></svg>
+            <p className="mt-2 text-gray-500">Âm thanh của bạn sẽ xuất hiện ở đây.</p>
+        </div>
+    );
 
     const renderOutput = () => {
-        if (isLoading) {
-            return (
-                <div className="flex flex-col items-center justify-center h-48 bg-gray-800/50 rounded-lg">
-                    <SpinnerIcon className="w-8 h-8 text-indigo-400" />
-                    <p className="mt-4 text-gray-300">Đang xử lý, vui lòng chờ...</p>
-                </div>
-            )
+        switch (jobStatus) {
+            case 'pending':
+                return (
+                    <div className="flex flex-col items-center justify-center h-48 bg-gray-800/50 rounded-lg">
+                        <SpinnerIcon className="w-8 h-8 text-indigo-400" />
+                        <p className="mt-4 text-gray-300">Yêu cầu đã được đưa vào hàng đợi...</p>
+                    </div>
+                );
+            case 'processing':
+                return (
+                    <div className="flex flex-col items-center justify-center h-48 bg-gray-800/50 rounded-lg">
+                        <SpinnerIcon className="w-8 h-8 text-indigo-400" />
+                        <p className="mt-4 text-gray-300">Đang xử lý, tác vụ lớn có thể mất vài phút...</p>
+                    </div>
+                );
+            case 'completed':
+                 if (audioUrl) {
+                    return (
+                        <div className="bg-gray-800/50 p-4 rounded-lg">
+                            <h3 className="text-lg font-semibold mb-2 text-center text-white">Kết quả</h3>
+                            <p className="text-center text-sm text-gray-400 mb-4">File âm thanh đã được tạo thành công.</p>
+                            <audio key={audioUrl} controls autoPlay className="w-full" src={audioUrl}>
+                                Trình duyệt của bạn không hỗ trợ phát âm thanh.
+                            </audio>
+                        </div>
+                    );
+                }
+                return renderIdleState(); // Fallback if URL is missing
+            case 'failed':
+                 return (
+                    <div className="flex flex-col items-center justify-center h-48 bg-gray-800/50 border-2 border-dashed border-red-700 rounded-lg p-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <p className="mt-2 text-red-400 font-semibold">Chuyển đổi thất bại</p>
+                        <p className="mt-1 text-sm text-gray-400 text-center">{errorMessage}</p>
+                    </div>
+                );
+            case 'idle':
+            default:
+                return renderIdleState();
         }
-        if (audioUrl) {
-            return (
-                <div className="bg-gray-800/50 p-4 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-2 text-center text-white">Kết quả</h3>
-                    <p className="text-center text-sm text-gray-400 mb-4">File âm thanh đã được tạo thành công.</p>
-                    <audio key={audioUrl} controls autoPlay className="w-full" src={audioUrl}>
-                        Trình duyệt của bạn không hỗ trợ phát âm thanh.
-                    </audio>
-                </div>
-            )
-        }
-        return (
-            <div className="flex flex-col items-center justify-center h-48 bg-gray-800/50 border-2 border-dashed border-gray-700 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 6l12-3" /></svg>
-                <p className="mt-2 text-gray-500">Âm thanh của bạn sẽ xuất hiện ở đây.</p>
-            </div>
-        )
     };
 
+    const isProcessing = jobStatus === 'pending' || jobStatus === 'processing';
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
@@ -294,11 +340,11 @@ const HomePage: React.FC = () => {
                             </h2>
                             <button
                                 onClick={handleConvert}
-                                disabled={isLoading || (user && (charCount === 0 || charCount > user.credits)) || (!user && (charCount === 0 || charCount > 100 || trialCount <= 0))}
+                                disabled={isProcessing || (user && (charCount === 0 || charCount > user.credits)) || (!user && (charCount === 0 || charCount > 100 || trialCount <= 0))}
                                 className="w-full flex items-center justify-center bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg shadow-indigo-600/20 hover:shadow-xl hover:shadow-indigo-500/30 disabled:from-indigo-500 disabled:to-purple-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500 text-lg"
-                                aria-busy={isLoading}
+                                aria-busy={isProcessing}
                             >
-                                {isLoading ? 'Đang xử lý...' : 'Chuyển đổi thành giọng nói'}
+                                {isProcessing ? 'Đang xử lý...' : 'Chuyển đổi thành giọng nói'}
                             </button>
                         </div>
                         {renderOutput()}

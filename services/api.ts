@@ -28,7 +28,7 @@
 //    DATABASE_URL='postgresql://user:password@host:port/database'
 //
 //    # JWT Secret for Sessions
-//    JWT_SECRET='một-chuỗi-bí-mật-dài-và-ngẫu-nhiên'
+//    JWT_SECRET='một-chuỗi-bí-mật-dài-và-ngẫu- nhiên'
 //    ```
 //
 // 2. **Backend của bạn sẽ đọc các biến này:**
@@ -46,38 +46,83 @@ import { User } from '../types';
 // Giả sử backend của bạn chạy trên domain này.
 const API_BASE_URL = '/api'; // Sử dụng proxy hoặc thay bằng URL đầy đủ, ví dụ: 'http://your-vps-ip:3001/api'
 
+
 // ========================================================================
-// Chức năng Chuyển đổi Giọng nói (Text-to-Speech)
+// Chức năng Chuyển đổi Giọng nói (Text-to-Speech) - Luồng Bất đồng bộ
 // ========================================================================
-interface TTSResponse {
-    audioUrl: string;
-    creditsUsed: number;
+
+// Store để mô phỏng trạng thái công việc trên backend.
+const jobStore = new Map<string, {
+    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    startTime: number;
+    audioUrl?: string;
+    error?: string;
+}>();
+
+
+/**
+ * BƯỚC 1: Gửi yêu cầu chuyển đổi đến backend.
+ * Backend sẽ đưa yêu cầu vào hàng đợi (queue) và trả về ngay một jobId.
+ */
+export const startConversionJob = async (text: string, voice: string): Promise<{ jobId: string }> => {
+    console.log('[API Service] Starting async conversion job...');
+    // Mô phỏng gọi API đến backend để xếp hàng công việc
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const jobId = `job_${Date.now()}`;
+    jobStore.set(jobId, { status: 'PENDING', startTime: Date.now() });
+
+    console.log(`[API Service] Job queued with ID: ${jobId}`);
+    return { jobId };
+};
+
+export interface JobStatusResponse {
+    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    audioUrl?: string;
+    error?: string;
 }
 
 /**
- * Gửi văn bản đến backend để chuyển đổi thành giọng nói.
- * Backend sẽ sử dụng GEMINI_API_KEY từ file .env của nó.
+ * BƯỚC 2: Kiểm tra (poll) trạng thái của công việc bằng jobId.
+ * Frontend sẽ gọi hàm này lặp lại cho đến khi nhận được 'COMPLETED' hoặc 'FAILED'.
  */
-export const convertTextToSpeech = async (text: string, voice: string): Promise<TTSResponse> => {
-    console.log('[API Service] Calling backend to convert text...');
-    const response = await fetch(`${API_BASE_URL}/tts/convert`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({ text, voice }),
-    });
+export const getConversionStatus = async (jobId: string): Promise<JobStatusResponse> => {
+    console.log(`[API Service] Polling status for job ID: ${jobId}`);
+    
+    // Trong ứng dụng thực tế, đây sẽ là một lời gọi fetch đến backend:
+    // const response = await fetch(`${API_BASE_URL}/tts/status/${jobId}`, { ... });
+    // const data = await response.json();
+    // return data;
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Lỗi khi chuyển đổi giọng nói');
+    // --- MÔ PHỎNG QUÁ TRÌNH XỬ LÝ CỦA BACKEND ---
+    const job = jobStore.get(jobId);
+    if (!job) {
+        return { status: 'FAILED', error: 'Không tìm thấy công việc.' };
+    }
+
+    const timeElapsed = Date.now() - job.startTime;
+
+    // 2 giây đầu tiên: Trạng thái "Đang chờ" (PENDING)
+    if (timeElapsed < 2000) {
+        return { status: 'PENDING' };
     }
     
-    // --- SIMULATION ---
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const sampleUrl = 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-A.wav';
-    return { audioUrl: sampleUrl, creditsUsed: text.length };
+    // 6 giây tiếp theo: Trạng thái "Đang xử lý" (PROCESSING)
+    if (timeElapsed < 8000) {
+        if (job.status !== 'PROCESSING') {
+            jobStore.set(jobId, { ...job, status: 'PROCESSING' });
+        }
+        return { status: 'PROCESSING' };
+    }
+
+    // Sau 8 giây: Trạng thái "Hoàn thành" (COMPLETED)
+    if (job.status !== 'COMPLETED') {
+        const sampleUrl = 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-A.wav';
+        jobStore.set(jobId, { ...job, status: 'COMPLETED', audioUrl: sampleUrl });
+    }
+    
+    const finalJob = jobStore.get(jobId)!;
+    return { status: 'COMPLETED', audioUrl: finalJob.audioUrl };
 };
 
 
