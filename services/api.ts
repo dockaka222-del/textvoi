@@ -1,79 +1,50 @@
 // services/api.ts
 // ====================================================================================
-// TRUNG TÂM QUẢN LÝ API VÀ BẢO MẬT VỚI .ENV TRÊN BACKEND
-// ====================================================================================
-// File này là cầu nối duy nhất giữa Frontend và Backend của bạn.
-//
-// **Kiến trúc bảo mật với file .env trên Backend (VPS):**
-//
-// 1. **Tạo file `.env` duy nhất trên VPS của bạn:**
-//    File này sẽ nằm ở thư mục gốc của dự án backend và KHÔNG BAO GIỜ được commit
-//    lên Git.
-//
-//    Nội dung file `.env` trên server của bạn sẽ trông như sau:
-//
-//    ```
-//    # PayOS Secret Keys
-//    PAYOS_CLIENT_ID='your-payos-client-id'
-//    PAYOS_API_KEY='your-payos-api-key'
-//    PAYOS_CHECKSUM_KEY='your-payos-checksum-key'
-//
-//    # Google Secret for Backend Verification
-//    GOOGLE_CLIENT_ID='your-google-client-id-for-web' // Backend cũng cần ID này để xác thực token
-//
-//    # Gemini API Key (hoặc dịch vụ TTS khác)
-//    GEMINI_API_KEY='your-secret-gemini-api-key'
-//
-//    # Database Connection
-//    DATABASE_URL='postgresql://user:password@host:port/database'
-//
-//    # JWT Secret for Sessions
-//    JWT_SECRET='một-chuỗi-bí-mật-dài-và-ngẫu- nhiên'
-//    ```
-//
-// 2. **Backend của bạn sẽ đọc các biến này:**
-//    Sử dụng thư viện như `dotenv` (cho Node.js), backend sẽ tải tất cả các giá trị
-//    từ file `.env` vào `process.env`.
-//
-// 3. **Frontend chỉ gọi đến Backend:**
-//    Frontend không bao giờ biết đến các key bí mật này. Nó chỉ thực hiện các lời
-//    gọi an toàn đến các endpoint mà bạn định nghĩa trên backend (ví dụ: `/api/tts/convert`).
-//
+// File này đã được cập nhật để gọi đến một BACKEND NODE.JS/EXPRESS THỰC SỰ.
+// Backend sẽ xử lý logic, quản lý secrets và giao tiếp với các dịch vụ bên ngoài.
 // ====================================================================================
 
 import { User } from '../types';
 
-// Giả sử backend của bạn chạy trên domain này.
-const API_BASE_URL = '/api'; // Sử dụng proxy hoặc thay bằng URL đầy đủ, ví dụ: 'http://your-vps-ip:3001/api'
+// Backend của bạn sẽ được Nginx proxy qua đường dẫn /api
+const API_BASE_URL = '/api';
+
+/**
+ * Lấy JWT token từ localStorage để gửi kèm trong header Authorization.
+ */
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('authToken');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
 
 
 // ========================================================================
 // Chức năng Chuyển đổi Giọng nói (Text-to-Speech) - Luồng Bất đồng bộ
 // ========================================================================
 
-// Store để mô phỏng trạng thái công việc trên backend.
-const jobStore = new Map<string, {
-    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-    startTime: number;
-    audioUrl?: string;
-    error?: string;
-}>();
-
-
 /**
  * BƯỚC 1: Gửi yêu cầu chuyển đổi đến backend.
- * Backend sẽ đưa yêu cầu vào hàng đợi (queue) và trả về ngay một jobId.
+ * Backend sẽ đưa yêu cầu vào hàng đợi và trả về ngay một jobId.
  */
 export const startConversionJob = async (text: string, voice: string): Promise<{ jobId: string }> => {
-    console.log('[API Service] Starting async conversion job...');
-    // Mô phỏng gọi API đến backend để xếp hàng công việc
-    await new Promise(resolve => setTimeout(resolve, 300));
+    console.log('[API Service] Calling backend to start async conversion job...');
+    const response = await fetch(`${API_BASE_URL}/tts/start`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ text, voice })
+    });
     
-    const jobId = `job_${Date.now()}`;
-    jobStore.set(jobId, { status: 'PENDING', startTime: Date.now() });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Lỗi không xác định' }));
+        throw new Error(`Failed to start job: ${errorData.message}`);
+    }
 
-    console.log(`[API Service] Job queued with ID: ${jobId}`);
-    return { jobId };
+    const data = await response.json();
+    console.log(`[API Service] Job queued with ID: ${data.jobId}`);
+    return data;
 };
 
 export interface JobStatusResponse {
@@ -87,62 +58,35 @@ export interface JobStatusResponse {
  * Frontend sẽ gọi hàm này lặp lại cho đến khi nhận được 'COMPLETED' hoặc 'FAILED'.
  */
 export const getConversionStatus = async (jobId: string): Promise<JobStatusResponse> => {
-    console.log(`[API Service] Polling status for job ID: ${jobId}`);
+    const response = await fetch(`${API_BASE_URL}/tts/status/${jobId}`, {
+        headers: getAuthHeaders()
+    });
     
-    // Trong ứng dụng thực tế, đây sẽ là một lời gọi fetch đến backend:
-    // const response = await fetch(`${API_BASE_URL}/tts/status/${jobId}`, { ... });
-    // const data = await response.json();
-    // return data;
-
-    // --- MÔ PHỎNG QUÁ TRÌNH XỬ LÝ CỦA BACKEND ---
-    const job = jobStore.get(jobId);
-    if (!job) {
-        return { status: 'FAILED', error: 'Không tìm thấy công việc.' };
+     if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Lỗi không xác định' }));
+        throw new Error(`Failed to get job status: ${errorData.message}`);
     }
 
-    const timeElapsed = Date.now() - job.startTime;
-
-    // 2 giây đầu tiên: Trạng thái "Đang chờ" (PENDING)
-    if (timeElapsed < 2000) {
-        return { status: 'PENDING' };
-    }
-    
-    // 6 giây tiếp theo: Trạng thái "Đang xử lý" (PROCESSING)
-    if (timeElapsed < 8000) {
-        if (job.status !== 'PROCESSING') {
-            jobStore.set(jobId, { ...job, status: 'PROCESSING' });
-        }
-        return { status: 'PROCESSING' };
-    }
-
-    // Sau 8 giây: Trạng thái "Hoàn thành" (COMPLETED)
-    if (job.status !== 'COMPLETED') {
-        const sampleUrl = 'https://cloud.google.com/text-to-speech/docs/audio/vi-VN-Standard-A.wav';
-        jobStore.set(jobId, { ...job, status: 'COMPLETED', audioUrl: sampleUrl });
-    }
-    
-    const finalJob = jobStore.get(jobId)!;
-    return { status: 'COMPLETED', audioUrl: finalJob.audioUrl };
+    return response.json();
 };
 
 
 // ========================================================================
-// Chức năng Quản lý Người dùng
+// Chức năng Quản lý Người dùng (Admin)
 // ========================================================================
 
 /**
- * Lấy danh sách tất cả người dùng từ backend.
+ * Lấy danh sách tất cả người dùng từ backend. (Yêu cầu quyền Admin)
  */
 export const getUsers = async (): Promise<User[]> => {
     console.log('[API Service] Fetching users from backend...');
     const response = await fetch(`${API_BASE_URL}/users`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+        headers: getAuthHeaders()
     });
-    if (!response.ok) throw new Error('Không thể tải danh sách người dùng');
-    
-    // --- SIMULATION ---
-    const { MOCK_USERS } = await import('../constants');
-    return MOCK_USERS;
+    if (!response.ok) {
+        throw new Error('Không thể tải danh sách người dùng. Bạn có phải là admin không?');
+    }
+    return response.json();
 };
 
 // ========================================================================
@@ -163,10 +107,9 @@ export const loginWithGoogle = async (credential: string): Promise<{user: User, 
          body: JSON.stringify({ credential })
      });
 
-     if (!response.ok) throw new Error('Xác thực Google thất bại');
-
-     // --- SIMULATION ---
-     const { MOCK_NORMAL_USER } = await import('../constants');
-     // Trong thực tế, backend sẽ trả về user tương ứng với credential
-     return { user: MOCK_NORMAL_USER, token: 'fake-jwt-token-from-backend' };
+     if (!response.ok) {
+         throw new Error('Xác thực Google với backend thất bại');
+     }
+     
+     return response.json();
 }
